@@ -1,0 +1,30 @@
+{
+  "title": "Forge",
+  "subtitle": "",
+  "windowMode": "launcher",
+  "showTileTips": true,
+  "theme": {
+    "bg1": "#07111f",
+    "bg2": "#0d2238",
+    "accent": "#f5a524",
+    "text": "#e8f3ff"
+  },
+  "apps": [
+    {
+      "name": "Example Web App",
+      "type": "web",
+      "icon": "🌐",
+      "description": "A sample web target",
+      "category": "Web",
+      "url": "https://example.com"
+    },
+    {
+      "name": "Firefox",
+      "type": "steam",
+      "icon": "🚀",
+      "description": "FPS",
+      "category": "Games",
+      "id": "659"
+    }
+  ]
+}

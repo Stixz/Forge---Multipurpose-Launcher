@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge Launcher</title>
+    <link rel="stylesheet" href="styles/base.css">
+    <link rel="stylesheet" href="styles/theme.css">
+    <link rel="stylesheet" href="styles/layout.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <link rel="stylesheet" href="styles/utilities.css">
+</head>
+<body>
+    <div class="launcher-shell">
+        <header class="topbar drag-region">
+            <div class="brand no-drag">
+                <h1 id="launcher-title">Forge</h1>
+                <p id="launcher-subtitle">Ravenforge</p>
+            </div>
+            <div class="title-drag-spacer drag-region" aria-hidden="true"></div>
+            <div class="actions no-drag">
+                <div class="profile-dropdown-wrapper no-drag">
+                    <button id="profile-dropdown-btn" class="profile-dropdown-btn" aria-label="Switch Profile" aria-expanded="false">
+                        <span id="profile-dropdown-label">Default</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="profile-dropdown-panel" class="profile-dropdown-panel hidden" aria-hidden="true">
+                    </div>
+                </div>
+                <button id="open-settings" class="btn">Settings</button>
+                <div id="window-controls" class="window-controls hidden">
+                    <button id="window-minimize" class="window-btn" aria-label="Minimize">-</button>
+                    <button id="window-maximize" class="window-btn" aria-label="Maximize">□</button>
+                    <button id="window-close" class="window-btn" aria-label="Close">x</button>
+                </div>
+            </div>
+        </header>
+
+        <section id="quick-tips" class="quick-tips hidden" aria-live="polite">
+            <p>
+                Tip: Left-click a tile to launch it. Drag tiles to rearrange, right-click to edit, or use Tab + Enter for keyboard navigation. Press Ctrl+K for instant Command Palette access. Switch app layouts with Profiles in Settings. Export your config to back it up or share it. If Persist in system tray is enabled, closing the window hides Forge to the tray instead of quitting.
+            </p>
+            <button id="dismiss-tips" class="btn ghost" type="button">Dismiss</button>
+        </section>
+
+        <main class="launcher-main">
+            <aside id="category-rail" class="category-rail" aria-label="Category filters"></aside>
+        </main>
+
+        <section class="launcher-content">
+            <section class="search-row" aria-label="Search apps">
+                <input id="app-search" class="search-input" type="text" placeholder="Search apps, categories, or descriptions" autocomplete="off">
+                <button id="clear-search" class="btn ghost hidden" type="button">Clear</button>
+            </section>
+
+            <section id="app-grid" class="grid" aria-label="Launcher apps"></section>
+        </section>
+    </div>
+
+    <div id="settings-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content settings-content">
+            <h2>Launcher Settings</h2>
+            <div class="settings-notice" role="note" aria-live="polite">
+                Save required: changes in Settings are not kept until you click Save Settings. Closing this window without saving will discard them.
+            </div>
+
+            <div class="settings-shell">
+                <aside id="settings-tabs" class="settings-tabs" role="tablist" aria-orientation="vertical" aria-label="Settings sections">
+                    <button class="settings-tab-btn active" type="button" role="tab" aria-selected="true" data-settings-tab="general">General</button>
+                    <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="appearance">Appearance</button>
+                    <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="launch">Launch</button>
+                    <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="security">Security</button>
+                    <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="profiles">Profiles & Apps</button>
+                    <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="data">Data</button>
+                </aside>
+
+                <section id="settings-panels" class="settings-panels">
+                    <section class="settings-panel" role="tabpanel" data-settings-panel="general">
+                        <h3 class="section-title">General</h3>
+
+                        <label class="hidden">Launcher Title
+                            <input type="text" id="cfg-title" placeholder="Forge">
+                        </label>
+
+                        <label class="hidden">Launcher Subtitle
+                            <input type="text" id="cfg-subtitle" placeholder="">
+                        </label>
+
+                        <label class="inline-toggle">
+                            <input type="checkbox" id="cfg-persist-to-tray" title="When enabled, closing the window hides Forge to the system tray instead of quitting. Use the tray menu to exit fully.">
+                            Persist in system tray when closing the launcher
+                        </label>
+
+                        <label class="inline-toggle">
+                            <input type="checkbox" id="cfg-show-tile-tips" checked>
+                            Show tile interaction tooltips (once per session)
+                        </label>
+
+                        <div class="editor-actions left-actions">
+                            <button id="open-help" class="btn ghost" type="button">Help</button>
+                        </div>
+                    </section>
+
+                    <section class="settings-panel hidden" role="tabpanel" data-settings-panel="appearance">
+                        <h3 class="section-title">Appearance</h3>
+                        <div class="color-grid" id="appearance-panel">
+                            <label>Background 1
+                                <input type="color" id="cfg-bg-1" value="#1a0f08">
+                            </label>
+                            <label>Background 2
+                                <input type="color" id="cfg-bg-2" value="#3a2014">
+                            </label>
+                            <label>Accent
+                                <input type="color" id="cfg-accent" value="#ff7a1a">
+                            </label>
+                            <label>Text
+                                <input type="color" id="cfg-text" value="#f7eee3">
+                            </label>
+                            <label>Hover / Glow
+                                <input type="color" id="cfg-hover" value="#ffb167">
+                            </label>
+                        </div>
+                        <div class="editor-actions left-actions">
+                            <button id="reset-theme-default" class="btn ghost" type="button">Reset Theme To Default</button>
+                        </div>
+
+                        <h3 class="section-title">Theme Presets</h3>
+                        <label>Saved Themes (max 3)
+                            <div class="row-input">
+                                <select id="theme-preset-select" aria-label="Saved theme presets">
+                                    <option value="">Select saved theme...</option>
+                                </select>
+                            </div>
+                        </label>
+                        <div class="editor-actions left-actions">
+                            <button id="save-theme-preset" class="btn" type="button">Save Current Theme</button>
+                            <button id="apply-theme-preset" class="btn ghost" type="button" disabled>Apply</button>
+                            <button id="delete-theme-preset" class="btn ghost" type="button" disabled>Delete</button>
+                        </div>
+                        <div id="theme-preset-list" class="theme-preset-list" aria-label="Theme preset previews"></div>
+
+                        <h3 class="section-title">Layout</h3>
+                        <label>Card Size Preset
+                            <select id="cfg-tile-size" title="Controls how large app tiles appear in the launcher. Choose Custom to set exact width and height with sliders.">
+                                <option value="compact">Compact</option>
+                                <option value="comfortable">Comfortable</option>
+                                <option value="large">Large</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </label>
+                        <div id="tile-size-custom-controls" class="custom-size-controls hidden">
+                            <label>Card Width
+                                <div class="custom-size-row">
+                                    <input type="range" id="cfg-tile-min-width" min="120" max="280" step="1" value="190" title="Minimum tile width in pixels (120–280 px).">
+                                    <span id="cfg-tile-min-width-value" class="size-value">190px</span>
+                                </div>
+                            </label>
+                            <label>Card Height
+                                <div class="custom-size-row">
+                                    <input type="range" id="cfg-tile-min-height" min="100" max="220" step="1" value="150" title="Minimum tile height in pixels (100–220 px).">
+                                    <span id="cfg-tile-min-height-value" class="size-value">150px</span>
+                                </div>
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="settings-panel hidden" role="tabpanel" data-settings-panel="launch">
+                        <h3 class="section-title">Launch Options</h3>
+                        <label class="inline-toggle">
+                            <input type="checkbox" id="cfg-startup-on-boot" title="Registers Forge to launch automatically when Windows starts (via the system startup registry).">
+                            Start Forge when Windows starts
+                        </label>
+
+                        <label>Global Hotkey
+                            <input type="text" id="cfg-global-hotkey" placeholder="Ctrl+Alt+F" title="Click this field then press your desired key combination to capture it (e.g. Ctrl+Alt+F). Press Backspace or Delete to clear.">
+                        </label>
+                    </section>
+
+                    <section class="settings-panel hidden" role="tabpanel" data-settings-panel="security">
+                        <h3 class="section-title">Security</h3>
+                        <label class="inline-toggle">
+                            <input type="checkbox" id="cfg-settings-pin-enabled" title="When enabled, opening Settings requires entering your PIN. After 5 failed attempts the field locks for 30 seconds.">
+                            Lock Settings with PIN
+                        </label>
+                        <label>PIN (4+ digits)
+                            <input type="password" id="cfg-settings-pin" placeholder="Enter new PIN" title="Minimum 4 digits. After 5 failed unlock attempts the field locks for 30 seconds.">
+                        </label>
+                        <label>Confirm PIN
+                            <input type="password" id="cfg-settings-pin-confirm" placeholder="Re-enter PIN" title="Must match the PIN entered above.">
+                        </label>
+                    </section>
+
+                    <section class="settings-panel hidden" role="tabpanel" data-settings-panel="profiles">
+                        <h3 class="section-title">Profiles</h3>
+                        <label>Active Profile
+                            <select id="profile-select"></select>
+                        </label>
+                        <div class="editor-actions left-actions">
+                            <button id="new-profile" class="btn ghost" type="button">New Profile</button>
+                            <button id="rename-profile" class="btn ghost" type="button">Rename</button>
+                            <button id="delete-profile" class="btn ghost" type="button">Delete</button>
+                        </div>
+
+                        <h3 class="section-title">App Editor</h3>
+                        <label>Existing App
+                            <div class="row-input">
+                                <select id="app-select"></select>
+                                <button id="remove-selected-app" class="btn ghost" type="button" title="Remove the selected app from this profile">Remove</button>
+                            </div>
+                        </label>
+
+                        <div class="editor-actions left-actions">
+                            <button id="new-app" class="btn ghost" type="button">New App</button>
+                        </div>
+
+                        <label>App Name
+                            <input type="text" id="app-name" placeholder="My App">
+                        </label>
+
+                        <label>App Type
+                            <select id="app-type" title="Web: opens a URL in your default browser. Local: runs an executable file. Steam: launches a game through Steam using its App ID.">
+                                <option value="web">Web</option>
+                                <option value="local">Local</option>
+                                <option value="steam">Steam</option>
+                            </select>
+                        </label>
+
+
+                        <label>Icon
+                            <input type="text" id="app-icon" placeholder="🚀" style="width: 4em;">
+                            <input type="file" id="app-icon-image" accept="image/*" style="display: none;">
+                            <button type="button" id="app-icon-image-btn" class="btn ghost" style="margin-left: 0.5em;">Browse Image</button>
+                            <button type="button" id="app-icon-extract-btn" class="btn ghost" style="margin-left: 0.5em;" title="Extract icon from executable">Extract from EXE</button>
+                            <span id="app-icon-image-preview" style="display: inline-block; width: 32px; height: 32px; vertical-align: middle; margin-left: 0.5em; background-size: contain; background-repeat: no-repeat; background-position: center;"></span>
+                            <span id="app-icon-image-remove" title="Remove image" style="display: none; cursor: pointer; margin-left: 0.5em;">✖️</span>
+                            <div id="app-icon-dropzone" style="border: 1px dashed #aaa; border-radius: 4px; padding: 0.5em; margin-top: 0.5em; text-align: center; color: #888; font-size: 0.9em;">Drag & drop image here</div>
+                        </label>
+
+                        <label>Description
+                            <input type="text" id="app-description" placeholder="Short description">
+                        </label>
+
+                        <label>Category
+                            <input type="text" id="app-category" placeholder="e.g. Games, Tools, Web" list="category-list" autocomplete="off">
+                            <datalist id="category-list"></datalist>
+                        </label>
+
+                        <label id="field-web">URL
+                            <input type="text" id="app-url" placeholder="https://...">
+                        </label>
+
+                        <label id="field-local" class="hidden">File or Folder Path
+                            <div class="row-input">
+                                <input type="text" id="app-path" placeholder="C:/Games/MyGame.exe or C:/Games/MyFolder" title="Use a full absolute path to an existing file or folder. Example: C:/Games/MyGame.exe or C:/Games/MyFolder. Browse is the safest option.">
+                                <button id="browse-exe" class="btn" type="button">File</button>
+                                <button id="browse-folder" class="btn ghost" type="button">Folder</button>
+                            </div>
+                        </label>
+
+                        <label id="field-local-args" class="hidden">Arguments
+                            <input type="text" id="app-args" placeholder="--flag value" title="Optional command-line arguments passed to the target when it is launched. Arguments only apply when Path points to a file, not a folder.">
+                        </label>
+
+                        <label id="field-steam" class="hidden">Steam App ID <span class="field-note">(Steam must be installed)</span>
+                            <input type="text" id="app-id" placeholder="730" title="The numeric Steam App ID for the game. Find it in the game's Steam store page URL (e.g. store.steampowered.com/app/730). CS2 = 730. Steam must be installed for this to work.">
+                        </label>
+
+                        <p id="app-editor-error" class="app-editor-error hidden" role="alert" aria-live="polite"></p>
+                        <div id="app-health-panel" class="app-health-panel hidden" aria-hidden="true">
+                            <h4 class="app-health-title">Launch Health</h4>
+                            <div class="app-health-grid">
+                                <p class="app-health-item"><span class="app-health-label">Type:</span> <span id="app-health-type" class="health-value--muted">-</span></p>
+                                <p class="app-health-item"><span class="app-health-label">Path Status:</span> <span id="app-health-path" class="health-value--muted">-</span></p>
+                                <p class="app-health-item"><span class="app-health-label">Launch Count:</span> <span id="app-health-count" class="health-value--muted">-</span></p>
+                                <p class="app-health-item"><span class="app-health-label">Last Launched:</span> <span id="app-health-last-launch" class="health-value--muted">-</span></p>
+                                <p class="app-health-item"><span class="app-health-label">Last Error:</span> <span id="app-health-last-error" class="health-value--muted">-</span></p>
+                            </div>
+                            <div class="editor-actions left-actions health-actions">
+                                <button id="clear-app-health-error" class="btn ghost" type="button" disabled>Clear Error</button>
+                            </div>
+                        </div>
+
+                        <div class="action-group">
+                            <h3 class="action-group-title">App Actions</h3>
+                            <div class="editor-actions left-actions">
+                                <button id="save-app" class="btn" type="button">Save App</button>
+                                <button id="delete-app" class="btn ghost" type="button">Delete App</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-panel hidden" role="tabpanel" data-settings-panel="data">
+                        <h3 class="section-title">Data And Config</h3>
+                        <div class="action-group">
+                            <h3 class="action-group-title">Config</h3>
+                            <div class="editor-actions left-actions">
+                                <button id="export-config" class="btn ghost" type="button">Export Config</button>
+                                <button id="import-config" class="btn ghost" type="button">Import Config</button>
+                            </div>
+                        </div>
+                        <div class="action-group">
+                            <h3 class="action-group-title">Auto-Saved Backups</h3>
+                            <p class="settings-notice">Forge saves a timestamped backup before every config write (up to 20). Click Restore on any entry to preview and apply it — you can Replace or Merge just like a normal import.</p>
+                            <div id="backup-list" class="backup-list"><p class="backup-empty">Loading…</p></div>
+                            <div class="editor-actions left-actions">
+                                <button id="refresh-backups" class="btn ghost" type="button">Refresh List</button>
+                            </div>
+                        </div>
+                    </section>
+                </section>
+            </div>
+
+            <div class="action-group action-group-right settings-sticky-bar">
+                <h3 class="action-group-title">Settings</h3>
+                <div class="editor-actions left-actions">
+                    <button id="save-settings" class="btn" type="button">Save Settings</button>
+                    <button id="close-settings" class="btn ghost" type="button">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="help-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content help-content">
+            <h2>Quick Tips</h2>
+            <h3 class="section-title">Launch</h3>
+            <ul class="help-list">
+                <li>Left-click a tile to launch it.</li>
+                <li>Drag and drop tiles to reorder them in the launcher.</li>
+                <li>Keyboard: Tab to focus tiles, Enter or Space to launch, arrow keys to move, Home/End to jump to ends.</li>
+                <li>Press Ctrl+K to open Command Palette for apps and quick actions (Settings, Profiles, Import/Export, tray toggle). Type to filter, use Up/Down arrows to choose, Enter to run, and Esc to close.</li>
+                <li>The search bar filters tiles by name, category, or description in real time.</li>
+                <li>Use the left Category rail to jump between groups instantly without typing.</li>
+            </ul>
+
+            <h3 class="section-title">Settings</h3>
+            <ul class="help-list">
+                <li>Changes in Settings are not kept until you click Save Settings.</li>
+                <li>To set a Global Hotkey: click the hotkey field in Settings and press your desired key combination (e.g. Ctrl+Alt+F). Press Backspace or Delete to clear.</li>
+                <li>Enable Start on Boot in Settings to have Forge launch automatically when Windows starts.</li>
+                <li>Choose a Card Size Preset (Compact / Comfortable / Large) in Settings to resize launcher tiles. Use Custom for precise width and height control via sliders.</li>
+                <li>You can lock Settings with a PIN in the Security section. After 5 failed unlock attempts the PIN field locks for 30 seconds.</li>
+            </ul>
+
+            <h3 class="section-title">Profiles & App Editor</h3>
+            <ul class="help-list">
+                <li>Use Profiles to maintain separate app layouts for work, gaming, streaming, or any context.</li>
+                <li>Right-click any tile to open the App Editor with that app pre-selected.</li>
+                <li>Use Category in the App Editor to group apps; groups appear as section headers in the main view.</li>
+                <li>App types: Web opens a URL in your default browser; Local runs a file/folder target; Steam launches a game via Steam using its App ID.</li>
+                <li>New App in the App Editor clears the form so you can add a fresh entry without affecting the currently selected app.</li>
+            </ul>
+
+            <h3 class="section-title">Config And Tray</h3>
+            <ul class="help-list">
+                <li>Export Config saves all your apps, profiles, and settings to a JSON file for backups or sharing.</li>
+                <li>Import Config shows a preview letting you Replace your current setup or Merge imported profiles and apps (duplicates are skipped automatically).</li>
+                <li>Enable Persist in system tray if you want closing the window to hide Forge instead of quitting it fully.</li>
+                <li>When Forge is in the tray, click the tray icon to reopen it, or right-click for the tray menu (Exit).</li>
+            </ul>
+            <div class="editor-actions">
+                <button id="close-help" class="btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <div id="context-menu" class="context-menu hidden" aria-hidden="true">
+        <button id="ctx-open-settings" class="ctx-menu-item" type="button">⚙️ Edit Apps</button>
+    </div>
+
+    <div id="import-preview-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content help-content">
+            <h2>Import Preview</h2>
+            <p id="import-preview-summary" class="import-preview-summary"></p>
+            <p id="import-preview-merge-breakdown" class="import-preview-breakdown"></p>
+            <div class="import-preview-grid">
+                <div class="import-preview-card">
+                    <h3>Replace</h3>
+                    <p>Replaces your current Forge settings, profiles, and apps with everything from the imported file.</p>
+                </div>
+                <div class="import-preview-card">
+                    <h3>Merge</h3>
+                    <p>Keeps your current Forge settings and adds imported profiles/apps without duplicating matching apps.</p>
+                </div>
+            </div>
+            <div class="import-preview-section">
+                <h3 class="section-title">Imported Profiles</h3>
+                <ul id="import-preview-profiles" class="help-list import-preview-list"></ul>
+            </div>
+            <div class="editor-actions split-actions">
+                <div class="actions-left">
+                    <button id="cancel-import-preview" class="btn ghost" type="button">Cancel</button>
+                </div>
+                <div class="actions-right">
+                    <button id="merge-import-preview" class="btn ghost" type="button">Merge</button>
+                    <button id="replace-import-preview" class="btn" type="button">Replace</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="command-palette-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content command-palette-content">
+            <h2>Command Palette</h2>
+            <p class="pin-note">Type to filter apps and commands, then press Enter to run. Use arrow keys to move through results.</p>
+            <input id="command-palette-input" type="text" class="search-input" placeholder="Type app name, category, description, or type" autocomplete="off">
+            <ul id="command-palette-results" class="command-palette-results"></ul>
+        </div>
+    </div>
+
+    <div id="mini-prompt-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content pin-content">
+            <p id="mini-prompt-label" class="pin-note"></p>
+            <label>
+                <input id="mini-prompt-input" type="text" autocomplete="off" placeholder="">
+            </label>
+            <div class="editor-actions split-actions">
+                <div class="actions-left">
+                    <button id="mini-prompt-cancel" class="btn ghost" type="button">Cancel</button>
+                </div>
+                <div class="actions-right">
+                    <button id="mini-prompt-ok" class="btn" type="button">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-pin-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content pin-content">
+            <h2>Unlock Settings</h2>
+            <p class="pin-note">Enter your PIN to access launcher settings.</p>
+            <label>PIN
+                <input id="settings-pin-input" type="password" autocomplete="off" inputmode="numeric" placeholder="Enter PIN">
+            </label>
+            <p id="settings-pin-error" class="pin-error hidden">Incorrect PIN. Try again.</p>
+            <div class="editor-actions split-actions">
+                <div class="actions-left">
+                    <button id="cancel-settings-pin" class="btn ghost" type="button">Cancel</button>
+                </div>
+                <div class="actions-right">
+                    <button id="unlock-settings-pin" class="btn" type="button">Unlock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer id="footer" class="bottombar">
+        <div class="footer-inner">
+            <p class="footer-brandline">
+                <span class="footer-product">Forge</span>
+                <span class="footer-dot">•</span>
+                <span class="footer-version">v1.0.0</span>
+            </p>
+            <p class="footer-text">Ravenforge Creations © 2026</p>
+            <p class="footer-meta">Ctrl+K for Command Palette · Right-click a tile to edit</p>
+        </div>
+    </footer>
+
+    <div id="resize-grip" class="resize-grip" aria-hidden="true"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

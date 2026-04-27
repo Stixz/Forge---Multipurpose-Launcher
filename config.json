@@ -1,0 +1,49 @@
+{
+    "title": "Forge",
+    "subtitle": "",
+    "persistToTray": false,
+    "startupOnBoot": false,
+    "globalHotkey": "",
+    "settingsPinEnabled": false,
+    "settingsPinHash": "",
+    "tileSizePreset": "comfortable",
+    "tileSizeCustom": {
+        "minWidth": 190,
+        "minHeight": 150
+    },
+    "theme": {
+        "bg1": "#1a0f08",
+        "bg2": "#3a2014",
+        "accent": "#ff7a1a",
+        "text": "#f7eee3",
+        "hover": "#ffb167"
+    },
+    "themePresets": [],
+    "apps": [
+        {
+            "name": "Example Web App",
+            "type": "web",
+            "icon": "🌐",
+            "description": "A sample web target",
+            "url": "https://example.com",
+            "category": ""
+        }
+    ],
+    "profiles": [
+        {
+            "id": "default",
+            "name": "Default",
+            "apps": [
+                {
+                    "name": "Example Web App",
+                    "type": "web",
+                    "icon": "🌐",
+                    "description": "A sample web target",
+                    "url": "https://example.com",
+                    "category": ""
+                }
+            ]
+        }
+    ],
+    "activeProfileId": "default"
+}

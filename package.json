@@ -1,0 +1,41 @@
+{
+    "name": "forge-launcher",
+    "productName": "Forge",
+    "version": "1.0.0",
+    "description": "Forge - Multipurpose Launcher",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "dist": "electron-builder"
+    },
+    "build": {
+        "appId": "studio.ravenforge.forge-launcher",
+        "productName": "Forge",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "app.js",
+            "main.js",
+            "preload.js",
+            "index.html",
+            "styles/",
+            "config.json",
+            "package.json",
+            "assets/"
+        ],
+        "win": {
+            "target": "nsis",
+            "icon": "assets/icon.ico"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true
+        }
+    },
+    "devDependencies": {
+        "electron": "^41.2.1",
+        "electron-builder": "^26.8.1",
+        "png-to-ico": "^3.0.1"
+    }
+}

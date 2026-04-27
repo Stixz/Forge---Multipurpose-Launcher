@@ -1,0 +1,28 @@
+/* ===========================
+   UTILITIES
+   =========================== */
+
+.ghost {
+    background: transparent;
+}
+
+/* ===========================
+   UTILITY: HIDDEN
+   =========================== */
+
+.hidden {
+    display: none !important;
+}
+
+/* ===========================
+   UTILITIES: ELECTRON DRAG REGIONS
+   =========================== */
+
+.drag-region {
+    -webkit-app-region: drag;
+}
+
+.no-drag {
+    -webkit-app-region: no-drag;
+}
+

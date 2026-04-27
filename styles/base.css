@@ -1,0 +1,53 @@
+/* ===========================
+   BASE: RESET & ROOT
+   =========================== */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+    color: var(--text);
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    background:
+        linear-gradient(150deg, var(--bg-1), var(--bg-2));
+}
+
+/* ===========================
+   BASE: SCROLLBARS
+   =========================== */
+
+body::-webkit-scrollbar {
+    display: none;
+}
+
+/* ===========================
+   BASE: GLOBAL BODY STYLING
+   =========================== */
+
+body {
+    min-height: 100vh;
+    font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+    color: var(--text);
+
+    background:
+        radial-gradient(circle at 84% 10%, rgba(147, 234, 255, 0.2), transparent 42%),
+        linear-gradient(150deg, var(--bg-1), var(--bg-2));
+}
+
+

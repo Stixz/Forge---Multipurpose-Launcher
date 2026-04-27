@@ -1,0 +1,29 @@
+/* ===========================
+   THEME: COLORS & TOKENS
+   =========================== */
+
+:root {
+    --bg-1: #1a0f08;
+    --bg-2: #3a2014;
+
+    --glass: rgba(255, 255, 255, 0.07);
+
+    --surface-header: #3a2014dd;
+    --surface-panel: #3a2014f2;
+    --surface-panel-strong: #3a2014f5;
+
+    --line: rgba(255, 255, 255, 0.18);
+
+    --text: #f7eee3;
+    --text-soft: #d9c8b2;
+
+    --accent: #ff7a1a;
+    --accent-2: #ffb167;
+
+    --hover-glow: #ffb167;
+    --tile-glow: #ffb1675c;
+
+    --tile-min: 165px;
+    --tile-min-height: 132px;
+}
+
