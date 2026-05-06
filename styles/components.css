@@ -5,8 +5,11 @@
 .topbar {
     position: fixed;
     top: 20px;
-    right: 220px;
-    width: 72%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90vw;
+    max-width: 90vw;
+    min-width: 300px;
 
     z-index: 30;
 
@@ -146,6 +149,84 @@
 }
 
 /* ===========================
+   COMPONENT: THEME DROPDOWN
+   =========================== */
+
+.theme-dropdown-wrapper {
+    position: relative;
+}
+
+.theme-dropdown-btn {
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.theme-dropdown-btn:hover {
+    border-color: var(--hover-glow);
+}
+
+.theme-dropdown-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+
+    min-width: 160px;
+    padding: 6px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-panel);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+
+    z-index: 100;
+}
+
+.theme-option {
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-option:hover {
+    background: rgba(245, 165, 36, 0.2);
+}
+
+.theme-option.active {
+    background: rgba(245, 165, 36, 0.3);
+}
+
+.theme-option-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, var(--t-bg1, #000) 0%, var(--t-bg2, #111) 100%);
+}
+
+/* ===========================
    COMPONENT: BUTTONS
    =========================== */
 
@@ -169,11 +250,6 @@
    =========================== */
 
 .category-rail {
-    position: fixed;
-    top: 130px;
-    left: calc(var(--shell-padding) + 185px);
-    width: var(--rail-width);
-
     border: 1px solid var(--line);
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.05);
@@ -182,9 +258,12 @@
 
     display: grid;
     gap: 6px;
+    align-content: start;
+    grid-auto-rows: 32px;
+    grid-auto-flow: row;
 
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
+    width: var(--rail-width);
+    align-self: start;
 }
 
 /* ===========================
@@ -203,6 +282,15 @@
     cursor: pointer;
     text-align: left;
     font-size: 0.84rem;
+    line-height: 1.2;
+    height: 32px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    display: flex;
+    align-items: center;
 
     transition: border-color 0.15s ease,
                 background 0.15s ease,
@@ -227,13 +315,16 @@
 .search-row {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    width: 100%;
     margin-bottom: 12px;
 }
 
 .search-input {
     flex: 1;
     width: 100%;
+    max-width: 600px;
     border-radius: 10px;
     border: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.08);
@@ -531,6 +622,30 @@ body.tile-tips-enabled .app-tile:hover::after {
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--accent-2);
+}
+
+.tile-favorite-btn {
+    pointer-events: auto;
+    background: none;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 4px;
+    margin: -4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tile-favorite-btn:hover {
+    color: var(--accent);
+    transform: scale(1.15);
+}
+
+.tile-favorite-btn[data-favorite="true"] {
+    color: var(--accent);
 }
 
 .name {
@@ -1136,7 +1251,7 @@ body.tile-tips-enabled .app-tile:hover::after {
 }
 
 .modal-content select option {
-    background: var(--surface-panel);
+    background: #1a1410;
     color: var(--text);
 }
 
@@ -1348,6 +1463,50 @@ body.tile-tips-enabled .app-tile:hover::after {
     color: var(--text-soft);
     font-size: 0.82rem;
     line-height: 1.35;
+}
+
+/* ===========================
+   COMPONENT: APP EDITOR ROWS
+   =========================== */
+
+.app-editor-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.app-editor-row-1 {
+    gap: 8px;
+}
+
+.app-editor-row-3 {
+    gap: 8px;
+}
+
+.app-editor-col {
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-editor-col input,
+.app-editor-col select {
+    width: 100%;
+}
+
+.app-editor-separator {
+    padding: 0 2px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: var(--text-soft);
+    user-select: none;
+}
+
+.app-editor-separator.hidden {
+    display: none;
 }
 
 .app-health-label {
@@ -1690,5 +1849,285 @@ body.tile-tips-enabled .app-tile:hover::after {
     );
 
     border-bottom-right-radius: 4px;
+}
+
+/* ===========================
+   COMPONENT: BATCH EDIT MODAL
+   =========================== */
+
+.batch-edit-content {
+    max-width: 500px;
+}
+
+.batch-edit-note {
+    font-size: 0.9rem;
+    color: var(--text-soft);
+    margin-bottom: 1.5em;
+}
+
+.batch-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    margin-bottom: 1.5em;
+}
+
+.batch-edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+}
+
+.batch-edit-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+}
+
+.batch-edit-checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.batch-edit-field input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.batch-edit-field input:not(:disabled) {
+    opacity: 1;
+}
+
+/* ===========================
+   COMPONENT: SELECTED TILES
+   =========================== */
+
+/* ===========================
+   COMPONENT: STATS POPUP
+   =========================== */
+
+.stats-popup {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 140px;
+    background: linear-gradient(
+        160deg,
+        rgba(255, 255, 255, 0.12),
+        rgba(255, 255, 255, 0.03)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 14px;
+    padding: 12px;
+    display: none;
+    z-index: 10;
+    color: var(--text);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    place-items: center;
+    backdrop-filter: blur(14px);
+    animation: statsSlideIn 0.2s ease-out;
+}
+
+@keyframes statsSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.stats-label {
+    font-size: 0.65rem;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.stats-value {
+    font-size: 0.9rem;
+    color: var(--accent-1);
+    font-weight: 600;
+    text-align: center;
+    word-break: break-word;
+}
+
+.stats-label.error,
+.stats-value.error {
+    grid-column: 1 / -1;
+    color: #ff6b6b;
+    font-size: 0.65rem;
+}
+
+/* ===========================
+   COMPONENT: TEMPLATES LIST
+   =========================== */
+
+.templates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 1em 0;
+}
+
+.templates-empty {
+    color: var(--text-soft);
+    font-size: 0.9rem;
+    padding: 1em;
+    text-align: center;
+}
+
+.template-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 12px;
+    gap: 12px;
+}
+
+.template-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.template-item-name {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.template-item-type {
+    font-size: 0.8rem;
+    color: var(--text-soft);
+}
+
+.template-item-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.template-item-actions .btn {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+
+/* ===========================
+   COMPONENT: TAG COLORS
+   =========================== */
+
+.app-tile[data-tag="red"] {
+    border-color: #ef4444;
+}
+
+.app-tile[data-tag="orange"] {
+    border-color: #f97316;
+}
+
+.app-tile[data-tag="yellow"] {
+    border-color: #eab308;
+}
+
+.app-tile[data-tag="green"] {
+    border-color: #22c55e;
+}
+
+.app-tile[data-tag="blue"] {
+    border-color: #3b82f6;
+}
+
+.app-tile[data-tag="purple"] {
+    border-color: #a855f7;
+}
+
+.app-tile[data-tag="pink"] {
+    border-color: #ec4899;
+}
+
+.app-tile[data-tag="gray"] {
+    border-color: #6b7280;
+}
+
+/* Selected tiles with tag colors */
+.app-tile.tile-selected[data-tag="red"] {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+}
+
+.app-tile.tile-selected[data-tag="orange"] {
+    background: rgba(249, 115, 22, 0.15);
+    border-color: #f97316;
+}
+
+.app-tile.tile-selected[data-tag="yellow"] {
+    background: rgba(234, 179, 8, 0.15);
+    border-color: #eab308;
+}
+
+.app-tile.tile-selected[data-tag="green"] {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: #22c55e;
+}
+
+.app-tile.tile-selected[data-tag="blue"] {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: #3b82f6;
+}
+
+.app-tile.tile-selected[data-tag="purple"] {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: #a855f7;
+}
+
+.app-tile.tile-selected[data-tag="pink"] {
+    background: rgba(236, 72, 153, 0.15);
+    border-color: #ec4899;
+}
+
+.app-tile.tile-selected[data-tag="gray"] {
+    background: rgba(107, 114, 128, 0.15);
+    border-color: #6b7280;
+}
+
+/* ===========================
+   COMPONENT: TILE SELECTION CHECKBOX
+   =========================== */
+
+.tile-select-checkbox {
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    margin: 0 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.app-tile:hover .tile-select-checkbox {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.tile-select-checkbox:checked {
+    accent-color: var(--accent-1);
+}
+
+/* ===========================
+   COMPONENT: SELECTED TILES
+   =========================== */
+
+.app-tile.tile-selected {
+    border-color: var(--accent-1);
+    border-width: 2px;
 }
 

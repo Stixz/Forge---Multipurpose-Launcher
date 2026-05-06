@@ -28,6 +28,14 @@
                     <div id="profile-dropdown-panel" class="profile-dropdown-panel hidden" aria-hidden="true">
                     </div>
                 </div>
+                <div class="theme-dropdown-wrapper no-drag">
+                    <button id="theme-dropdown-btn" class="theme-dropdown-btn" aria-label="Switch Theme" aria-expanded="false" title="Quick theme switcher">
+                        <span id="theme-dropdown-label">Theme</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="theme-dropdown-panel" class="theme-dropdown-panel hidden" aria-hidden="true">
+                    </div>
+                </div>
                 <button id="open-settings" class="btn">Settings</button>
                 <div id="window-controls" class="window-controls hidden">
                     <button id="window-minimize" class="window-btn" aria-label="Minimize">-</button>
@@ -69,10 +77,11 @@
                 <aside id="settings-tabs" class="settings-tabs" role="tablist" aria-orientation="vertical" aria-label="Settings sections">
                     <button class="settings-tab-btn active" type="button" role="tab" aria-selected="true" data-settings-tab="general">General</button>
                     <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="appearance">Appearance</button>
-                    <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="launch">Launch</button>
                     <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="security">Security</button>
                     <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="profiles">Profiles & Apps</button>
                     <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="data">Data</button>
+                    <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="hotkeys">Hotkeys</button>
+                    <button class="settings-tab-btn" type="button" role="tab" aria-selected="false" data-settings-tab="help">Help</button>
                 </aside>
 
                 <section id="settings-panels" class="settings-panels">
@@ -97,9 +106,17 @@
                             Show tile interaction tooltips (once per session)
                         </label>
 
-                        <div class="editor-actions left-actions">
-                            <button id="open-help" class="btn ghost" type="button">Help</button>
-                        </div>
+                        <h3 class="section-title">Launch Options</h3>
+                        <label class="inline-toggle">
+                            <input type="checkbox" id="cfg-startup-on-boot" title="Registers Forge to launch automatically when Windows starts (via the system startup registry).">
+                            Start Forge when Windows starts
+                        </label>
+
+                        <label>Global Hotkey
+                            <input type="text" id="cfg-global-hotkey" placeholder="Ctrl+Alt+F" title="Click this field then press your desired key combination to capture it (e.g. Ctrl+Alt+F). Press Backspace or Delete to clear.">
+                        </label>
+
+                        <button id="open-help" class="btn ghost hidden" type="button" style="display: none;">Help</button>
                     </section>
 
                     <section class="settings-panel hidden" role="tabpanel" data-settings-panel="appearance">
@@ -165,18 +182,6 @@
                         </div>
                     </section>
 
-                    <section class="settings-panel hidden" role="tabpanel" data-settings-panel="launch">
-                        <h3 class="section-title">Launch Options</h3>
-                        <label class="inline-toggle">
-                            <input type="checkbox" id="cfg-startup-on-boot" title="Registers Forge to launch automatically when Windows starts (via the system startup registry).">
-                            Start Forge when Windows starts
-                        </label>
-
-                        <label>Global Hotkey
-                            <input type="text" id="cfg-global-hotkey" placeholder="Ctrl+Alt+F" title="Click this field then press your desired key combination to capture it (e.g. Ctrl+Alt+F). Press Backspace or Delete to clear.">
-                        </label>
-                    </section>
-
                     <section class="settings-panel hidden" role="tabpanel" data-settings-panel="security">
                         <h3 class="section-title">Security</h3>
                         <label class="inline-toggle">
@@ -214,39 +219,23 @@
                             <button id="new-app" class="btn ghost" type="button">New App</button>
                         </div>
 
-                        <label>App Name
-                            <input type="text" id="app-name" placeholder="My App">
-                        </label>
+                        <!-- Row 1: App Name -- App Type -->
+                        <div class="app-editor-row app-editor-row-1">
+                            <label class="app-editor-col">App Name
+                                <input type="text" id="app-name" placeholder="My App">
+                            </label>
+                            <span class="app-editor-separator">--</span>
+                            <label class="app-editor-col">App Type
+                                <select id="app-type" title="Web: opens a URL in your default browser. Local: runs an executable file. Steam: launches a game through Steam using its App ID.">
+                                    <option value="web">Web</option>
+                                    <option value="local">Local</option>
+                                    <option value="steam">Steam</option>
+                                </select>
+                            </label>
+                        </div>
 
-                        <label>App Type
-                            <select id="app-type" title="Web: opens a URL in your default browser. Local: runs an executable file. Steam: launches a game through Steam using its App ID.">
-                                <option value="web">Web</option>
-                                <option value="local">Local</option>
-                                <option value="steam">Steam</option>
-                            </select>
-                        </label>
-
-
-                        <label>Icon
-                            <input type="text" id="app-icon" placeholder="🚀" style="width: 4em;">
-                            <input type="file" id="app-icon-image" accept="image/*" style="display: none;">
-                            <button type="button" id="app-icon-image-btn" class="btn ghost" style="margin-left: 0.5em;">Browse Image</button>
-                            <button type="button" id="app-icon-extract-btn" class="btn ghost" style="margin-left: 0.5em;" title="Extract icon from executable">Extract from EXE</button>
-                            <span id="app-icon-image-preview" style="display: inline-block; width: 32px; height: 32px; vertical-align: middle; margin-left: 0.5em; background-size: contain; background-repeat: no-repeat; background-position: center;"></span>
-                            <span id="app-icon-image-remove" title="Remove image" style="display: none; cursor: pointer; margin-left: 0.5em;">✖️</span>
-                            <div id="app-icon-dropzone" style="border: 1px dashed #aaa; border-radius: 4px; padding: 0.5em; margin-top: 0.5em; text-align: center; color: #888; font-size: 0.9em;">Drag & drop image here</div>
-                        </label>
-
-                        <label>Description
-                            <input type="text" id="app-description" placeholder="Short description">
-                        </label>
-
-                        <label>Category
-                            <input type="text" id="app-category" placeholder="e.g. Games, Tools, Web" list="category-list" autocomplete="off">
-                            <datalist id="category-list"></datalist>
-                        </label>
-
-                        <label id="field-web">URL
+                        <!-- Row 2: File or Folder Path / File / Folder -->
+                        <label id="field-web" class="hidden">URL
                             <input type="text" id="app-url" placeholder="https://...">
                         </label>
 
@@ -258,12 +247,66 @@
                             </div>
                         </label>
 
-                        <label id="field-local-args" class="hidden">Arguments
-                            <input type="text" id="app-args" placeholder="--flag value" title="Optional command-line arguments passed to the target when it is launched. Arguments only apply when Path points to a file, not a folder.">
-                        </label>
-
                         <label id="field-steam" class="hidden">Steam App ID <span class="field-note">(Steam must be installed)</span>
                             <input type="text" id="app-id" placeholder="730" title="The numeric Steam App ID for the game. Find it in the game's Steam store page URL (e.g. store.steampowered.com/app/730). CS2 = 730. Steam must be installed for this to work.">
+                        </label>
+
+                        <!-- Row 3: Arguments -- Category -- Description -->
+                        <div class="app-editor-row app-editor-row-3">
+                            <label id="field-local-args" class="app-editor-col hidden">Arguments
+                                <input type="text" id="app-args" placeholder="--flag value" title="Optional command-line arguments passed to the target when it is launched. Arguments only apply when Path points to a file, not a folder.">
+                            </label>
+                            <span class="app-editor-separator hidden" id="sep-args">--</span>
+                            <label class="app-editor-col">Category
+                                <input type="text" id="app-category" placeholder="e.g. Games, Tools, Web" list="category-list" autocomplete="off">
+                                <datalist id="category-list"></datalist>
+                            </label>
+                            <span class="app-editor-separator">--</span>
+                            <label class="app-editor-col">Description
+                                <input type="text" id="app-description" placeholder="Short description">
+                            </label>
+                        </div>
+
+                        <!-- Row 4: Aliases (alternate search terms) -->
+                        <label>Aliases
+                            <input type="text" id="app-aliases" placeholder="e.g., code, editor, vscode (comma-separated)" title="Alternate names and search terms for this app. Separated by commas.">
+                        </label>
+
+                        <!-- Tag -->
+                        <label>Tag
+                            <select id="app-tag" title="Assign a color tag for visual organization">
+                                <option value="">None</option>
+                            </select>
+                        </label>
+
+                        <!-- Hotkey -->
+                        <label>Global Hotkey
+                            <div class="row-input">
+                                <input type="text" id="app-hotkey" placeholder="Press to record..." readonly style="cursor: pointer;" title="Click 'Record' to assign a global hotkey that launches this app from anywhere">
+                                <button type="button" id="app-hotkey-record-btn" class="btn ghost" style="margin-left: 0.5em;">Record</button>
+                                <button type="button" id="app-hotkey-clear-btn" class="btn ghost" style="margin-left: 0.5em;" title="Clear the hotkey">Clear</button>
+                                <span id="app-hotkey-status" style="margin-left: 0.5em; font-size: 0.9em; color: #888;"></span>
+                            </div>
+                        </label>
+
+                        <!-- Row 4: Icon Section -->
+                        <label>Icon
+                            <input type="text" id="app-icon" placeholder="🚀" style="width: 4em;">
+                            <input type="file" id="app-icon-image" accept="image/*" style="display: none;">
+                            <button type="button" id="app-icon-image-btn" class="btn ghost" style="margin-left: 0.5em;">Browse Image</button>
+                            <button type="button" id="app-icon-extract-btn" class="btn ghost" style="margin-left: 0.5em;" title="Extract icon from executable">Extract from EXE</button>
+                            <span id="app-icon-image-preview" style="display: inline-block; width: 32px; height: 32px; vertical-align: middle; margin-left: 0.5em; background-size: contain; background-repeat: no-repeat; background-position: center;"></span>
+                            <span id="app-icon-image-remove" title="Remove image" style="display: none; cursor: pointer; margin-left: 0.5em;">✖️</span>
+                            <div id="app-icon-dropzone" style="border: 1px dashed #aaa; border-radius: 4px; padding: 0.5em; margin-top: 0.5em; text-align: center; color: #888; font-size: 0.9em;">Drag & drop image here</div>
+                        </label>
+
+                        <!-- Notes Section -->
+                        <input type="hidden" id="app-notes">
+                        <label>Notes
+                            <div class="row-input">
+                                <input type="text" id="app-notes-preview" placeholder="Click to add notes..." readonly style="cursor: pointer;">
+                                <button type="button" id="app-notes-btn" class="btn ghost" style="margin-left: 0.5em;">Edit Notes</button>
+                            </div>
                         </label>
 
                         <p id="app-editor-error" class="app-editor-error hidden" role="alert" aria-live="polite"></p>
@@ -285,8 +328,15 @@
                             <h3 class="action-group-title">App Actions</h3>
                             <div class="editor-actions left-actions">
                                 <button id="save-app" class="btn" type="button">Save App</button>
+                                <button id="save-as-template-btn" class="btn ghost" type="button">Save as Template</button>
                                 <button id="delete-app" class="btn ghost" type="button">Delete App</button>
                             </div>
+                        </div>
+
+                        <h3 class="section-title">App Templates</h3>
+                        <p class="settings-notice">Save app configurations as templates to quickly create similar apps. Templates are accessed from Ctrl+K command palette.</p>
+                        <div id="templates-list" class="templates-list">
+                            <p class="templates-empty">No templates yet. Create one by editing an app and clicking "Save as Template".</p>
                         </div>
                     </section>
 
@@ -307,6 +357,53 @@
                                 <button id="refresh-backups" class="btn ghost" type="button">Refresh List</button>
                             </div>
                         </div>
+                    </section>
+
+                    <section class="settings-panel hidden" role="tabpanel" data-settings-panel="hotkeys">
+                        <h3 class="section-title">Global Hotkeys</h3>
+                        <p style="margin-bottom: 1em; color: #aaa; font-size: 0.9em;">Assign keyboard shortcuts to launch apps from anywhere, even when Forge is not focused.</p>
+                        <div id="hotkeys-list" style="display: flex; flex-direction: column; gap: 0.5em;">
+                            <p style="color: #888;">No hotkeys assigned yet. Add a hotkey in the app editor.</p>
+                        </div>
+                    </section>
+
+                    <section class="settings-panel hidden" role="tabpanel" data-settings-panel="help">
+                        <h2>Quick Tips</h2>
+                        <h3 class="section-title">Launch</h3>
+                        <ul class="help-list">
+                            <li>Left-click a tile to launch it.</li>
+                            <li>Drag and drop tiles to reorder them in the launcher.</li>
+                            <li>Keyboard: Tab to focus tiles, Enter or Space to launch, arrow keys to move, Home/End to jump to ends.</li>
+                            <li>Press Ctrl+K to open Command Palette for apps and quick actions (Settings, Profiles, Import/Export, tray toggle). Type to filter, use Up/Down arrows to choose, Enter to run, and Esc to close.</li>
+                            <li>The search bar filters tiles by name, category, or description in real time.</li>
+                            <li>Use the left Category rail to jump between groups instantly without typing.</li>
+                        </ul>
+
+                        <h3 class="section-title">Settings</h3>
+                        <ul class="help-list">
+                            <li>Changes in Settings are not kept until you click Save Settings.</li>
+                            <li>To set a Global Hotkey: click the hotkey field in Settings and press your desired key combination (e.g. Ctrl+Alt+F). Press Backspace or Delete to clear.</li>
+                            <li>Enable Start on Boot in Settings to have Forge launch automatically when Windows starts.</li>
+                            <li>Choose a Card Size Preset (Compact / Comfortable / Large) in Settings to resize launcher tiles. Use Custom for precise width and height control via sliders.</li>
+                            <li>You can lock Settings with a PIN in the Security section. After 5 failed unlock attempts the PIN field locks for 30 seconds.</li>
+                        </ul>
+
+                        <h3 class="section-title">Profiles & App Editor</h3>
+                        <ul class="help-list">
+                            <li>Use Profiles to maintain separate app layouts for work, gaming, streaming, or any context.</li>
+                            <li>Right-click any tile to open the App Editor with that app pre-selected.</li>
+                            <li>Use Category in the App Editor to group apps; groups appear as section headers in the main view.</li>
+                            <li>App types: Web opens a URL in your default browser; Local runs a file/folder target; Steam launches a game via Steam using its App ID.</li>
+                            <li>New App in the App Editor clears the form so you can add a fresh entry without affecting the currently selected app.</li>
+                        </ul>
+
+                        <h3 class="section-title">Config And Tray</h3>
+                        <ul class="help-list">
+                            <li>Export Config saves all your apps, profiles, and settings to a JSON file for backups or sharing.</li>
+                            <li>Import Config shows a preview letting you Replace your current setup or Merge imported profiles and apps (duplicates are skipped automatically).</li>
+                            <li>Enable Persist in system tray if you want closing the window to hide Forge instead of quitting it fully.</li>
+                            <li>When Forge is in the tray, click the tray icon to reopen it, or right-click for the tray menu (Exit).</li>
+                        </ul>
                     </section>
                 </section>
             </div>
@@ -442,6 +539,105 @@
                 </div>
                 <div class="actions-right">
                     <button id="unlock-settings-pin" class="btn" type="button">Unlock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-notes-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content notes-content">
+            <h2>App Notes</h2>
+            <textarea id="app-notes-input" placeholder="Add notes about this app..." style="width: 100%; min-height: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-secondary); color: var(--text); font-family: inherit; resize: vertical;"></textarea>
+            <div class="editor-actions split-actions" style="margin-top: 12px;">
+                <div class="actions-left">
+                    <button id="cancel-notes" class="btn ghost" type="button">Cancel</button>
+                </div>
+                <div class="actions-right">
+                    <button id="save-notes" class="btn" type="button">Save Notes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="launch-args-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content pin-content">
+            <h2>Launch Arguments</h2>
+            <p class="pin-note" id="launch-args-app-name"></p>
+            <label>Arguments
+                <input id="launch-args-input" type="text" placeholder="e.g., --debug --port 8080" autocomplete="off">
+            </label>
+            <p class="pin-note" style="font-size: 0.85rem; color: var(--text-soft); margin-top: 8px;">These arguments will only apply to this launch.</p>
+            <div class="editor-actions split-actions">
+                <div class="actions-left">
+                    <button id="cancel-launch-args" class="btn ghost" type="button">Cancel</button>
+                </div>
+                <div class="actions-right">
+                    <button id="confirm-launch-args" class="btn" type="button">Launch</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="batch-edit-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content batch-edit-content">
+            <h2>Batch Edit <span id="batch-edit-count">(0 apps)</span></h2>
+            <p class="batch-edit-note">Edit selected apps. Check the box next to a field to update it for all selected apps.</p>
+
+            <div class="batch-edit-form">
+                <!-- Category -->
+                <div class="batch-edit-field">
+                    <label class="batch-edit-checkbox-label">
+                        <input type="checkbox" class="batch-edit-toggle" data-field="category">
+                        <span>Category</span>
+                    </label>
+                    <input type="text" id="batch-category" placeholder="e.g., Games, Tools, Web" disabled>
+                </div>
+
+                <!-- Description -->
+                <div class="batch-edit-field">
+                    <label class="batch-edit-checkbox-label">
+                        <input type="checkbox" class="batch-edit-toggle" data-field="description">
+                        <span>Description</span>
+                    </label>
+                    <input type="text" id="batch-description" placeholder="Short description" disabled>
+                </div>
+
+                <!-- Aliases -->
+                <div class="batch-edit-field">
+                    <label class="batch-edit-checkbox-label">
+                        <input type="checkbox" class="batch-edit-toggle" data-field="aliases">
+                        <span>Aliases</span>
+                    </label>
+                    <input type="text" id="batch-aliases" placeholder="comma-separated" disabled>
+                </div>
+
+                <!-- Icon -->
+                <div class="batch-edit-field">
+                    <label class="batch-edit-checkbox-label">
+                        <input type="checkbox" class="batch-edit-toggle" data-field="icon">
+                        <span>Icon</span>
+                    </label>
+                    <input type="text" id="batch-icon" placeholder="🚀" style="width: 4em;" disabled>
+                </div>
+
+                <!-- Tag -->
+                <div class="batch-edit-field">
+                    <label class="batch-edit-checkbox-label">
+                        <input type="checkbox" class="batch-edit-toggle" data-field="tag">
+                        <span>Tag</span>
+                    </label>
+                    <select id="batch-tag" disabled>
+                        <option value="">None</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="editor-actions split-actions">
+                <div class="actions-left">
+                    <button id="cancel-batch-edit" class="btn ghost" type="button">Cancel</button>
+                </div>
+                <div class="actions-right">
+                    <button id="apply-batch-edit" class="btn" type="button">Apply Changes</button>
                 </div>
             </div>
         </div>

@@ -1,0 +1,27 @@
+# ESE database transaction logs (runtime artifacts, not source)
+edb.chk
+edb.log
+edbres00001.jrs
+edbres00002.jrs
+edbtmp.log
+
+# Scan output logs
+logs/
+
+# Node / Electron
+node_modules/
+dist/
+
+# Runtime / cache
+Cache/
+SessionData/
+backups/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp

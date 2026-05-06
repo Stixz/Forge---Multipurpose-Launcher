@@ -9,6 +9,7 @@ let closeToTray = false;
 let isQuitting = false;
 let trayNoticeShown = false;
 let registeredHotkey = "";
+const registeredAppHotkeys = new Map(); // Maps hotkey string to app data
 
 const DEFAULT_WINDOW_BOUNDS = {
     width: 1120,
@@ -264,6 +265,13 @@ function createTray() {
     ]));
 
     tray.on("click", () => showMainWindow());
+}
+
+function getDialogSelectionPath(result) {
+    if (!result || result.canceled || !Array.isArray(result.filePaths) || !result.filePaths.length) {
+        return "";
+    }
+    return result.filePaths[0];
 }
 
 function registerGlobalHotkey(accelerator) {
@@ -596,11 +604,7 @@ app.whenReady().then(() => {
             ]
         });
 
-        if (result.canceled || !result.filePaths.length) {
-            return "";
-        }
-
-        return result.filePaths[0];
+        return getDialogSelectionPath(result);
     });
 
     ipcMain.handle("target:browseFolder", async () => {
@@ -613,11 +617,7 @@ app.whenReady().then(() => {
             properties: ["openDirectory"]
         });
 
-        if (result.canceled || !result.filePaths.length) {
-            return "";
-        }
-
-        return result.filePaths[0];
+        return getDialogSelectionPath(result);
     });
 
     ipcMain.handle("icon:extract", async (_event, exePath) => {
@@ -651,7 +651,6 @@ app.whenReady().then(() => {
                 $icon.Dispose()
             `;
 
-            const { spawn } = require("node:child_process");
             await new Promise((resolve, reject) => {
                 const ps = spawn("powershell.exe", ["-Command", psScript]);
                 ps.on("close", (code) => code === 0 ? resolve() : reject(new Error(`PowerShell exited with code ${code}`)));
@@ -670,6 +669,53 @@ app.whenReady().then(() => {
         } catch (error) {
             console.error("Icon extraction error:", error);
             return null;
+        }
+    });
+
+    ipcMain.handle("hotkey:register", (_event, appData) => {
+        if (!appData || !appData.hotkey) {
+            return { success: false, error: "Invalid app data" };
+        }
+
+        const hotkey = appData.hotkey.trim();
+        if (!hotkey) {
+            return { success: false, error: "Empty hotkey" };
+        }
+
+        try {
+            // Register the hotkey
+            const registered = globalShortcut.register(hotkey, () => {
+                if (mainWindow) {
+                    mainWindow.webContents.send("launch-app-by-hotkey", appData);
+                }
+            });
+
+            if (registered) {
+                registeredAppHotkeys.set(hotkey, appData);
+                console.log(`Hotkey registered: ${hotkey} -> ${appData.name}`);
+                return { success: true };
+            } else {
+                return { success: false, error: "Hotkey registration failed (may be in use by system)" };
+            }
+        } catch (error) {
+            console.error("Hotkey registration error:", error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle("hotkey:unregister", (_event, hotkey) => {
+        if (!hotkey) {
+            return { success: false };
+        }
+
+        try {
+            globalShortcut.unregister(hotkey);
+            registeredAppHotkeys.delete(hotkey);
+            console.log(`Hotkey unregistered: ${hotkey}`);
+            return { success: true };
+        } catch (error) {
+            console.error("Hotkey unregister error:", error);
+            return { success: false };
         }
     });
 
@@ -786,7 +832,7 @@ app.whenReady().then(() => {
             return false;
         }
 
-        require("node:fs").writeFileSync(result.filePath, jsonString, "utf8");
+        fs.writeFileSync(result.filePath, jsonString, "utf8");
         return true;
     });
 
@@ -805,7 +851,7 @@ app.whenReady().then(() => {
             return null;
         }
 
-        return require("node:fs").readFileSync(result.filePaths[0], "utf8");
+        return fs.readFileSync(result.filePaths[0], "utf8");
     });
 
     app.on("activate", () => {

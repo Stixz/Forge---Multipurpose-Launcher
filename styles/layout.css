@@ -17,8 +17,13 @@
     max-width: 1100px;
     margin: 0 auto;
     padding: 20px;
-    padding-top: 90px;
+    padding-top: 140px;
     padding-bottom: 92px;
+
+    display: grid;
+    grid-template-columns: var(--rail-width) 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 14px;
 
     transition: filter 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
     transform-origin: center top;
@@ -40,11 +45,7 @@ body.settings-open .launcher-shell {
    =========================== */
 
 .launcher-main {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    align-items: start;
+    display: contents;
 }
 
 /* ===========================
@@ -52,21 +53,30 @@ body.settings-open .launcher-shell {
    =========================== */
 
 .launcher-content {
-    min-width: 0;
-    margin-left: auto;
-    margin-right: var(--shell-padding);
-    max-width: 790px;
-    padding-top: 20px;
-
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-
-    mask-image: linear-gradient(to bottom, transparent 0px, black 80px);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 80px);
+    display: contents;
 }
 
 .launcher-content::-webkit-scrollbar {
     display: none;
+}
+
+/* ===========================
+   LAYOUT: GRID POSITIONING
+   =========================== */
+
+.category-rail {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.search-row {
+    grid-column: 1 / -1;
+    grid-row: 1;
+}
+
+#app-grid {
+    grid-column: 2;
+    grid-row: 2;
 }
 
 /* ===========================
@@ -104,6 +114,7 @@ body.settings-open .launcher-shell {
 @media (max-width: 920px) {
     .launcher-shell {
         padding: 14px;
+        grid-template-columns: 1fr;
     }
 
     .topbar {
@@ -117,9 +128,19 @@ body.settings-open .launcher-shell {
         justify-content: space-between;
     }
 
-    .launcher-main {
-        grid-template-columns: 1fr;
-        gap: 10px;
+    .category-rail {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .search-row {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    #app-grid {
+        grid-column: 1;
+        grid-row: 3;
     }
 }
 
@@ -130,7 +151,6 @@ body.settings-open .launcher-shell {
 @media (max-width: 920px) {
 
     .category-rail {
-        position: static;
         display: flex;
         flex-wrap: wrap;
         gap: 6px;

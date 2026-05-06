@@ -24,6 +24,19 @@ function setupIconImageInput() {
         }
     }
 
+    function setImageFromFile(file) {
+        if (!file || !file.type.startsWith("image/")) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            imageDataUrl = ev.target.result;
+            updatePreview();
+        };
+        reader.readAsDataURL(file);
+    }
+
     browseBtn.addEventListener("click", () => fileInput.click());
 
     extractBtn.addEventListener("click", async () => {
@@ -66,14 +79,7 @@ function setupIconImageInput() {
 
     fileInput.addEventListener("change", (e) => {
         const file = e.target.files[0];
-        if (file && file.type.startsWith("image/")) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                imageDataUrl = ev.target.result;
-                updatePreview();
-            };
-            reader.readAsDataURL(file);
-        }
+        setImageFromFile(file);
     });
 
     removeBtn.addEventListener("click", () => {
@@ -95,14 +101,7 @@ function setupIconImageInput() {
         e.preventDefault();
         dropzone.style.borderColor = "#aaa";
         const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith("image/")) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                imageDataUrl = ev.target.result;
-                updatePreview();
-            };
-            reader.readAsDataURL(file);
-        }
+        setImageFromFile(file);
     });
 
     // Save/Load integration
@@ -181,6 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Context menu - Edit Apps button
     byId("ctx-open-settings").addEventListener("click", async () => {
         hideContextMenu();
+        state.settingsTab = "profiles";
         await openSettingsModal();
     });
 
@@ -190,17 +190,27 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleProfileDropdown();
     });
 
+    // Top bar theme dropdown
+    byId("theme-dropdown-btn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleThemeDropdown();
+    });
+
     // Dismiss profile dropdown on click outside
     document.addEventListener("click", (e) => {
         if (profileDropdownVisible && !e.target.closest(".profile-dropdown-wrapper")) {
             hideProfileDropdown();
         }
+        if (themeDropdownVisible && !e.target.closest(".theme-dropdown-wrapper")) {
+            hideThemeDropdown();
+        }
     });
 
-    // Dismiss profile dropdown on ESC
+    // Dismiss dropdowns on ESC
     document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && profileDropdownVisible) {
-            hideProfileDropdown();
+        if (e.key === "Escape") {
+            if (profileDropdownVisible) hideProfileDropdown();
+            if (themeDropdownVisible) hideThemeDropdown();
         }
     });
 });
@@ -236,8 +246,20 @@ const defaultConfig = {
                 text: "#f8f8f2",
                 hover: "#6fa3d9"
             }
+        },
+        {
+            id: "minimalist",
+            name: "Minimalist",
+            theme: {
+                bg1: "#1a1a1a",
+                bg2: "#262626",
+                accent: "#7a9b8f",
+                text: "#c8c8c8",
+                hover: "#8fab9f"
+            }
         }
     ],
+    templates: [],
     apps: [
         {
             name: "Example Web App",
@@ -271,6 +293,19 @@ const CATEGORY_FILTER_ALL = "__all__";
 const CATEGORY_FILTER_UNCATEGORIZED = "__uncategorized__";
 const CATEGORY_FILTER_RECENT = "__recent__";
 const CATEGORY_FILTER_MOST_USED = "__mostused__";
+const TAG_FILTER_NONE = "__notag__";
+
+// App tag color palette
+const APP_TAG_COLORS = [
+    { id: "red", name: "Red", bg: "rgba(239, 68, 68, 0.15)", border: "#ef4444" },
+    { id: "orange", name: "Orange", bg: "rgba(249, 115, 22, 0.15)", border: "#f97316" },
+    { id: "yellow", name: "Yellow", bg: "rgba(234, 179, 8, 0.15)", border: "#eab308" },
+    { id: "green", name: "Green", bg: "rgba(34, 197, 94, 0.15)", border: "#22c55e" },
+    { id: "blue", name: "Blue", bg: "rgba(59, 130, 246, 0.15)", border: "#3b82f6" },
+    { id: "purple", name: "Purple", bg: "rgba(168, 85, 247, 0.15)", border: "#a855f7" },
+    { id: "pink", name: "Pink", bg: "rgba(236, 72, 153, 0.15)", border: "#ec4899" },
+    { id: "gray", name: "Gray", bg: "rgba(107, 114, 128, 0.15)", border: "#6b7280" }
+];
 
 // Health check state — runtime only, never persisted.
 const healthBroken = new Set();
@@ -360,7 +395,9 @@ const state = {
     categoryFilter: CATEGORY_FILTER_ALL,
     settingsTab: "general",
     selectedThemePresetId: "",
-    pendingImport: null
+    pendingImport: null,
+    pendingLaunchApp: null,
+    selectedAppIndices: new Set()
 };
 
 const isDesktop = Boolean(window.launcherAPI);
@@ -376,6 +413,7 @@ let promptReturnFocusElement = null;
 let commandPaletteSelectionIndex = 0;
 let commandPaletteReturnFocusElement = null;
 let appHealthRefreshToken = 0;
+let currentHotkeyRecording = null;
 
 async function hashPin(pin) {
     const text = String(pin || "").trim();
@@ -779,6 +817,33 @@ function showModal(visible) {
     document.body.classList.toggle("settings-open", visible);
 }
 
+function showNotesModal(visible) {
+    const modal = byId("app-notes-modal");
+    modal.classList.toggle("hidden", !visible);
+    modal.setAttribute("aria-hidden", String(!visible));
+}
+
+function showLaunchArgsModal(visible) {
+    const modal = byId("launch-args-modal");
+    modal.classList.toggle("hidden", !visible);
+    modal.setAttribute("aria-hidden", String(!visible));
+}
+
+function openAppNotesEditor() {
+    const currentNotes = byId("app-notes").value || "";
+    byId("app-notes-input").value = currentNotes;
+    showNotesModal(true);
+    setTimeout(() => byId("app-notes-input").focus(), 0);
+}
+
+function saveAppNotes() {
+    const notes = byId("app-notes-input").value;
+    byId("app-notes").value = notes;
+    const preview = notes.split('\n')[0].substring(0, 50) || "(no notes)";
+    byId("app-notes-preview").value = preview;
+    showNotesModal(false);
+}
+
 function setSettingsTab(tabKey) {
     const tabsRoot = byId("settings-tabs");
     const panelsRoot = byId("settings-panels");
@@ -808,6 +873,10 @@ function setSettingsTab(tabKey) {
 
     if (next === "data") {
         loadConfigBackupList();
+    }
+
+    if (next === "hotkeys") {
+        renderHotkeysList();
     }
 }
 
@@ -1010,6 +1079,28 @@ function getCommandPaletteCommands() {
         });
     });
 
+    // Add template commands
+    getTemplates().forEach((template) => {
+        commands.push({
+            kind: "command",
+            icon: template.icon || "📦",
+            title: `Create from Template: ${template.name}`,
+            meta: "Template",
+            searchText: `template ${template.name} ${template.category || ""} create from`,
+            run: async () => {
+                const opened = await openSettingsModal();
+                if (!opened) {
+                    return;
+                }
+                setSettingsTab("profiles");
+                const newApp = createAppFromTemplate(template);
+                loadAppIntoEditorWithoutSave(newApp);
+                focusAppEditorNameField();
+                showToast(`Loaded template: ${template.name}`, "success");
+            }
+        });
+    });
+
     return commands;
 }
 
@@ -1201,6 +1292,20 @@ function handleGlobalKeydown(event) {
             openCommandPalette();
         }
     }
+
+    // Quick launch with number keys (1-9)
+    if (/^[1-9]$/.test(event.key)) {
+        // Don't trigger if in an input/textarea or if any modifier key is pressed
+        const target = event.target;
+        const isTextInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+        const hasModifier = event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
+        const isModalOpen = byId("settings-modal") && !byId("settings-modal").classList.contains("hidden");
+
+        if (!isTextInput && !hasModifier && !isModalOpen) {
+            event.preventDefault();
+            quickLaunchAppByNumber(parseInt(event.key));
+        }
+    }
 }
 
 function buildImportedConfig(source) {
@@ -1213,6 +1318,7 @@ function buildImportedConfig(source) {
         },
         apps: Array.isArray(source.apps) ? source.apps : [],
         profiles: Array.isArray(source.profiles) ? source.profiles : [],
+        themePresets: Array.isArray(source.themePresets) && source.themePresets.length > 0 ? source.themePresets : defaultConfig.themePresets,
         activeProfileId: source.activeProfileId || "",
         tileSizePreset: normalizeTileSizePreset(source.tileSizePreset || defaultConfig.tileSizePreset),
         tileSizeCustom: normalizeTileSizeCustom(source.tileSizeCustom || defaultConfig.tileSizeCustom)
@@ -1302,6 +1408,22 @@ function mergeImportedConfig(currentConfig, importedConfig) {
         });
     });
 
+    // Merge theme presets
+    if (Array.isArray(importedConfig.themePresets) && importedConfig.themePresets.length > 0) {
+        const existingPresetIds = new Set(
+            (merged.themePresets || []).map((p) => p.id)
+        );
+        const newPresets = importedConfig.themePresets.filter(
+            (p) => !existingPresetIds.has(p.id)
+        );
+        if (newPresets.length > 0) {
+            if (!merged.themePresets) {
+                merged.themePresets = [];
+            }
+            merged.themePresets.push(...newPresets);
+        }
+    }
+
     return {
         config: normalizeConfigObject(merged),
         summary: { profilesAdded, profilesMerged, appsAdded, duplicatesSkipped, profileDetails }
@@ -1376,6 +1498,8 @@ async function commitConfig(config) {
     applyTheme(state.config.theme);
     applyTileSizePreset(state.config.tileSizePreset);
     syncSettingsForm();
+    renderThemePresetSelect();
+    renderTopBarThemeDropdown();
     renderApps();
     applyTileTipsVisibility();
 }
@@ -1565,6 +1689,7 @@ function setTypeFields(type) {
     byId("field-local").classList.toggle("hidden", type !== "local");
     byId("field-local-args").classList.toggle("hidden", type !== "local");
     byId("field-steam").classList.toggle("hidden", type !== "steam");
+    byId("sep-args").classList.toggle("hidden", type !== "local");
 }
 
 function refreshCategoryList() {
@@ -1594,11 +1719,18 @@ function clearAppEditor() {
     byId("app-icon").value = "🚀";
     byId("app-description").value = "";
     byId("app-category").value = "";
+    byId("app-aliases").value = "";
+    byId("app-tag").value = "";
     byId("app-url").value = "";
     byId("app-path").value = "";
     byId("app-args").value = "";
     byId("app-id").value = "";
     byId("app-select").value = "";
+    byId("app-notes").value = "";
+    byId("app-notes-preview").value = "";
+    byId("app-hotkey").value = "";
+    byId("app-hotkey-status").textContent = "";
+    currentHotkeyRecording = null;
     setTypeFields("web");
     if (iconImageInput) iconImageInput.clear();
     syncAppSelectionActions();
@@ -1721,6 +1853,40 @@ async function refreshAppHealthPanel() {
     }
 }
 
+function loadAppIntoEditorWithoutSave(app) {
+    refreshCategoryList();
+    if (!app) {
+        clearAppEditor();
+        return;
+    }
+
+    state.editingAppIndex = null;
+    byId("app-select").value = "";
+    byId("app-name").value = app.name || "";
+    byId("app-type").value = app.type || "web";
+    byId("app-icon").value = app.icon || "🚀";
+    byId("app-description").value = app.description || "";
+    byId("app-category").value = app.category || "";
+    byId("app-aliases").value = app.aliases || "";
+    byId("app-tag").value = app.tag || "";
+    byId("app-url").value = app.url || "";
+    byId("app-path").value = app.path || "";
+    byId("app-args").value = app.args || "";
+    byId("app-id").value = app.id || "";
+    byId("app-notes").value = app.notes || "";
+    const notesPreview = (app.notes || "").split('\n')[0].substring(0, 50) || "";
+    byId("app-notes-preview").value = notesPreview;
+    byId("app-hotkey").value = app.hotkey || "";
+    byId("app-hotkey-status").textContent = app.hotkey ? "(assigned)" : "";
+    currentHotkeyRecording = null;
+    setTypeFields(app.type || "web");
+    setSettingsTab("profiles");
+    if (iconImageInput) iconImageInput.setImageData(null);
+
+    syncAppSelectionActions();
+    refreshAppHealthPanel();
+}
+
 function loadAppIntoEditor(index) {
     refreshCategoryList();
     const app = getActiveApps()[index];
@@ -1736,10 +1902,18 @@ function loadAppIntoEditor(index) {
     byId("app-icon").value = app.icon || "🚀";
     byId("app-description").value = app.description || "";
     byId("app-category").value = app.category || "";
+    byId("app-aliases").value = app.aliases || "";
+    byId("app-tag").value = app.tag || "";
     byId("app-url").value = app.url || "";
     byId("app-path").value = app.path || "";
     byId("app-args").value = app.args || "";
     byId("app-id").value = app.id || app.steamId || "";
+    byId("app-notes").value = app.notes || "";
+    const notesPreview = (app.notes || "").split('\n')[0].substring(0, 50) || "";
+    byId("app-notes-preview").value = notesPreview;
+    byId("app-hotkey").value = app.hotkey || "";
+    byId("app-hotkey-status").textContent = app.hotkey ? "(assigned)" : "";
+    currentHotkeyRecording = null;
     setTypeFields(app.type || "web");
     setSettingsTab("profiles");
     if (iconImageInput) iconImageInput.setImageData(app.iconImage || null);
@@ -1763,7 +1937,8 @@ function getAppEditorData() {
         url: byId("app-url").value.trim(),
         path: byId("app-path").value.trim(),
         args: byId("app-args").value.trim(),
-        id: byId("app-id").value.trim()
+        id: byId("app-id").value.trim(),
+        hotkey: byId("app-hotkey").value.trim()
     };
 }
 // --- Patch app rendering to support iconImage ---
@@ -1884,6 +2059,100 @@ function toggleProfileDropdown() {
     }
 }
 
+function renderTopBarThemeDropdown() {
+    const panel = byId("theme-dropdown-panel");
+    const label = byId("theme-dropdown-label");
+    if (!panel || !label) {
+        return;
+    }
+
+    panel.innerHTML = "";
+    const presets = Array.isArray(state.config.themePresets) ? [...state.config.themePresets] : [];
+
+    // Always include the built-in Obsidian Steel Blue
+    const builtInPreset = {
+        id: "obsidian-steelblue",
+        name: "Obsidian Steel Blue",
+        theme: {
+            bg1: "#181c20",
+            bg2: "#232a32",
+            accent: "#4682b4",
+            text: "#f8f8f2",
+            hover: "#6fa3d9"
+        }
+    };
+    if (!presets.some(p => p.id === builtInPreset.id)) {
+        presets.unshift(builtInPreset);
+    }
+
+    presets.forEach((preset) => {
+        const button = document.createElement("button");
+        button.className = "theme-option";
+        button.dataset.themeId = preset.id;
+
+        if (preset.id === state.selectedThemePresetId) {
+            button.classList.add("active");
+        }
+
+        const swatch = document.createElement("span");
+        swatch.className = "theme-option-swatch";
+        swatch.style.setProperty("--t-bg1", preset.theme?.bg1 || "#000");
+        swatch.style.setProperty("--t-bg2", preset.theme?.bg2 || "#111");
+
+        const name = document.createElement("span");
+        name.textContent = preset.name;
+
+        button.appendChild(swatch);
+        button.appendChild(name);
+
+        button.addEventListener("click", () => {
+            applyThemePresetById(preset.id);
+            hideThemeDropdown();
+            renderTopBarThemeDropdown();
+        });
+
+        panel.appendChild(button);
+    });
+
+    label.textContent = presets.find(p => p.id === state.selectedThemePresetId)?.name || "Theme";
+}
+
+let themeDropdownVisible = false;
+
+function showThemeDropdown() {
+    const panel = byId("theme-dropdown-panel");
+    const btn = byId("theme-dropdown-btn");
+    if (!panel || !btn) {
+        return;
+    }
+
+    panel.classList.remove("hidden");
+    panel.setAttribute("aria-hidden", "false");
+    btn.setAttribute("aria-expanded", "true");
+    themeDropdownVisible = true;
+}
+
+function hideThemeDropdown() {
+    const panel = byId("theme-dropdown-panel");
+    const btn = byId("theme-dropdown-btn");
+    if (!panel || !btn) {
+        return;
+    }
+
+    panel.classList.add("hidden");
+    panel.setAttribute("aria-hidden", "true");
+    btn.setAttribute("aria-expanded", "false");
+    themeDropdownVisible = false;
+}
+
+function toggleThemeDropdown() {
+    if (themeDropdownVisible) {
+        hideThemeDropdown();
+    } else {
+        showThemeDropdown();
+    }
+}
+
 async function switchProfile(profileId) {
     if (!state.config.profiles.some((profile) => profile.id === profileId)) {
         return;
@@ -1996,7 +2265,10 @@ function syncSettingsForm() {
 
     renderProfileSelector();
     renderTopBarProfileDropdown();
+    renderTopBarThemeDropdown();
     renderAppSelector();
+    renderTemplatesList();
+    populateTagSelects();
     clearAppEditor();
 }
 
@@ -2214,18 +2486,79 @@ function tileMarkup(app) {
     const name = app.name || "Untitled";
     const desc = app.description || "No description";
     const broken = isAppBroken(app);
+    const isFavorite = app.favorite === true;
 
     const typeLabel = type === "local" ? "Local" : type === "steam" ? "Steam" : "Web";
     return `
         <div class="tile-header">
             ${renderAppIcon(app)}
             <span class="type-pill">${typeLabel}</span>
+            <input type="checkbox" class="tile-select-checkbox" title="Select for batch edit" aria-label="Select for batch edit">
+            <button class="tile-favorite-btn" data-favorite="${isFavorite}" type="button" title="Add to favorites" aria-label="Toggle favorite">
+                ${isFavorite ? "★" : "☆"}
+            </button>
             ${broken ? `<span class="tile-broken-badge">⚠️</span>` : ""}
         </div>
         <div class="name">${name}</div>
         <p class="desc">${desc}</p>
         ${broken ? `<button class="tile-health-fix-btn" type="button" title="Open App Editor to fix local path">Fix Path</button>` : ""}
     `;
+}
+
+async function toggleAppFavorite(appIndex) {
+    const app = getActiveApps()[appIndex];
+    if (!app) {
+        return;
+    }
+
+    app.favorite = !app.favorite;
+    syncAppsMirror();
+    await persistConfig();
+    renderApps();
+    showToast(
+        app.favorite ? `⭐ Favorited "${app.name}"` : `Removed "${app.name}" from favorites`,
+        "info",
+        2000
+    );
+}
+
+async function quickLaunchAppByNumber(number) {
+    const tiles = getTileElements();
+    if (number < 1 || number > tiles.length) {
+        return;
+    }
+
+    const tile = tiles[number - 1];
+    if (!tile) {
+        return;
+    }
+
+    // Simulate click to launch
+    tile.click();
+}
+
+async function launchAppWithCustomArgs(app, customArgs) {
+    // Create a temporary copy with merged arguments
+    const appCopy = { ...app };
+    if (customArgs.trim()) {
+        appCopy.args = customArgs.trim();
+    }
+
+    await launchApp(appCopy);
+}
+
+async function openLaunchArgsDialog(app) {
+    if (app.type !== "local") {
+        // Only for local apps
+        await launchApp(app);
+        return;
+    }
+
+    state.pendingLaunchApp = app;
+    byId("launch-args-app-name").textContent = `Launching: ${app.name}`;
+    byId("launch-args-input").value = app.args || "";
+    showLaunchArgsModal(true);
+    setTimeout(() => byId("launch-args-input").focus(), 0);
 }
 
 async function launchApp(app) {
@@ -2254,6 +2587,226 @@ async function launchApp(app) {
     recordLaunchFailure(app, "Desktop launch targets are available in the Electron build.");
     showToast("Desktop launch targets are available in the Electron build.", "info", 3600);
     refreshAppHealthPanel();
+}
+
+function clearAppSelection() {
+    document.querySelectorAll(".app-tile.tile-selected").forEach((tile) => {
+        tile.classList.remove("tile-selected");
+        const checkbox = tile.querySelector(".tile-select-checkbox");
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+    });
+    state.selectedAppIndices.clear();
+}
+
+function openBatchEditModal() {
+    const selectedIndices = Array.from(state.selectedAppIndices).sort((a, b) => a - b);
+    const apps = getActiveApps();
+    const selectedApps = selectedIndices.map((idx) => apps[idx]);
+
+    if (selectedApps.length === 0) {
+        return;
+    }
+
+    // Update modal header
+    byId("batch-edit-count").textContent = `(${selectedApps.length} apps)`;
+
+    // Reset all checkboxes and inputs
+    document.querySelectorAll(".batch-edit-toggle").forEach((checkbox) => {
+        checkbox.checked = false;
+        const field = checkbox.dataset.field;
+        const input = byId(`batch-${field}`);
+        if (input) {
+            input.disabled = true;
+            input.value = "";
+        }
+    });
+
+    // Show modal
+    showBatchEditModal(true);
+}
+
+function showBatchEditModal(visible) {
+    const modal = byId("batch-edit-modal");
+    modal.classList.toggle("hidden", !visible);
+    modal.setAttribute("aria-hidden", String(!visible));
+}
+
+function applyBatchEdit() {
+    const selectedIndices = Array.from(state.selectedAppIndices).sort((a, b) => a - b);
+    const apps = getActiveApps();
+
+    const updates = {
+        category: null,
+        description: null,
+        aliases: null,
+        icon: null,
+        tag: null
+    };
+
+    let hasUpdates = false;
+
+    // Collect which fields to update
+    document.querySelectorAll(".batch-edit-toggle").forEach((checkbox) => {
+        if (checkbox.checked) {
+            const field = checkbox.dataset.field;
+            const input = byId(`batch-${field}`);
+            if (input) {
+                updates[field] = input.value;
+                hasUpdates = true;
+            }
+        }
+    });
+
+    if (!hasUpdates) {
+        showToast("No fields selected to update", "warning");
+        return;
+    }
+
+    // Apply updates to selected apps
+    selectedIndices.forEach((idx) => {
+        const app = apps[idx];
+        if (app) {
+            if (updates.category !== null) {
+                app.category = updates.category;
+            }
+            if (updates.description !== null) {
+                app.description = updates.description;
+            }
+            if (updates.aliases !== null) {
+                app.aliases = updates.aliases;
+            }
+            if (updates.icon !== null) {
+                app.icon = updates.icon;
+            }
+            if (updates.tag !== null) {
+                app.tag = updates.tag;
+            }
+        }
+    });
+
+    persistApps();
+    renderApps();
+    clearAppSelection();
+    showBatchEditModal(false);
+    showToast(`Updated ${selectedIndices.length} app${selectedIndices.length !== 1 ? "s" : ""}`, "success");
+}
+
+function saveAppAsTemplate(appIndex, templateName) {
+    const apps = getActiveApps();
+    const app = apps[appIndex];
+    if (!app) {
+        return false;
+    }
+
+    const template = {
+        id: `template-${Date.now()}`,
+        name: templateName || `${app.name} Template`,
+        type: app.type,
+        category: app.category || "",
+        description: app.description || "",
+        icon: app.icon || "📦",
+        aliases: app.aliases || "",
+        args: app.type === "local" ? (app.args || "") : ""
+    };
+
+    state.config.templates.push(template);
+    persistConfig();
+    return true;
+}
+
+function createAppFromTemplate(template) {
+    const newApp = {
+        name: "",
+        type: template.type,
+        category: template.category,
+        description: template.description,
+        icon: template.icon,
+        aliases: template.aliases,
+        args: template.args || ""
+    };
+
+    // Set type-specific fields
+    if (template.type === "local") {
+        newApp.path = "";
+    } else if (template.type === "web") {
+        newApp.url = "";
+    } else if (template.type === "steam") {
+        newApp.id = "";
+    }
+
+    return newApp;
+}
+
+function deleteTemplate(templateIndex) {
+    if (templateIndex >= 0 && templateIndex < state.config.templates.length) {
+        state.config.templates.splice(templateIndex, 1);
+        persistConfig();
+        return true;
+    }
+    return false;
+}
+
+function getTemplates() {
+    return state.config.templates || [];
+}
+
+function getTagColor(tagId) {
+    return APP_TAG_COLORS.find((t) => t.id === tagId) || null;
+}
+
+function populateTagSelects() {
+    const selects = document.querySelectorAll("[id^='app-tag'], [id^='batch-tag']");
+    selects.forEach((select) => {
+        // Clear except "None" option
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+        // Add color options
+        APP_TAG_COLORS.forEach((color) => {
+            const option = document.createElement("option");
+            option.value = color.id;
+            option.textContent = `● ${color.name}`;
+            select.appendChild(option);
+        });
+    });
+}
+
+function renderTemplatesList() {
+    const container = byId("templates-list");
+    if (!container) {
+        return;
+    }
+
+    const templates = getTemplates();
+    if (templates.length === 0) {
+        container.innerHTML = '<p class="templates-empty">No templates yet. Create one by editing an app and clicking "Save as Template".</p>';
+        return;
+    }
+
+    container.innerHTML = templates.map((template, idx) => `
+        <div class="template-item">
+            <div class="template-item-info">
+                <div class="template-item-name">${template.name}</div>
+                <div class="template-item-type">${template.type === "local" ? "Local" : template.type === "steam" ? "Steam" : "Web"} • ${template.category || "No category"}</div>
+            </div>
+            <div class="template-item-actions">
+                <button class="btn ghost template-delete-btn" data-template-index="${idx}" type="button">Delete</button>
+            </div>
+        </div>
+    `).join("");
+
+    // Add delete listeners
+    container.querySelectorAll(".template-delete-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const idx = parseInt(btn.dataset.templateIndex);
+            if (deleteTemplate(idx)) {
+                showToast("Template deleted", "success");
+                renderTemplatesList();
+            }
+        });
+    });
 }
 
 async function openBrokenPathQuickFix(appIndex) {
@@ -2320,6 +2873,364 @@ function wireAppGridDropHandlers() {
     appGridDropHandlersWired = true;
 }
 
+function extractDomainFromUrl(urlString) {
+    try {
+        const url = new URL(urlString);
+        return url.hostname.replace("www.", "") || "App";
+    } catch {
+        return "App";
+    }
+}
+
+function fetchFaviconUrl(urlString) {
+    try {
+        const url = new URL(urlString);
+        const domain = url.hostname;
+        return `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+    } catch {
+        return "";
+    }
+}
+
+function guessCategoryFromUrl(url) {
+    try {
+        const domain = new URL(url).hostname.toLowerCase();
+
+        // Domain-based category mapping
+        const categoryMap = {
+            // Shopping
+            "amazon": "Shopping", "ebay": "Shopping", "aliexpress": "Shopping", "walmart": "Shopping",
+            "etsy": "Shopping", "target": "Shopping", "bestbuy": "Shopping",
+
+            // Development
+            "github": "Development", "stackoverflow": "Development", "npmjs": "Development",
+            "npmjs.com": "Development", "npm.org": "Development", "gitlab": "Development",
+            "bitbucket": "Development", "codepen": "Development",
+
+            // Entertainment
+            "youtube": "Entertainment", "netflix": "Entertainment", "hulu": "Entertainment",
+            "disneyplus": "Entertainment", "twitch": "Entertainment", "imdb": "Entertainment",
+
+            // Communication
+            "gmail": "Communication", "outlook": "Communication", "slack": "Communication",
+            "discord": "Communication", "telegram": "Communication", "whatsapp": "Communication",
+            "facebook": "Communication", "twitter": "Communication", "linkedin": "Communication",
+
+            // Social Media
+            "reddit": "Social Media", "instagram": "Social Media", "tiktok": "Social Media",
+            "pinterest": "Social Media", "snapchat": "Social Media",
+
+            // Cloud
+            "google.com": "Cloud", "dropbox": "Cloud", "onedrive": "Cloud",
+            "icloud": "Cloud", "box.com": "Cloud", "mega.nz": "Cloud",
+
+            // News
+            "news": "News", "bbc": "News", "cnn": "News", "nytimes": "News",
+        };
+
+        // Check for domain matches
+        for (const [key, category] of Object.entries(categoryMap)) {
+            if (domain.includes(key)) {
+                return category;
+            }
+        }
+
+        return "Web";
+    } catch {
+        return "Web";
+    }
+}
+
+
+function wireAppCreationDropHandlers() {
+    const container = byId("app-grid");
+    if (!container) return;
+
+    // Track dragover for visual feedback
+    let isOverGrid = false;
+
+    container.addEventListener("dragover", (e) => {
+        const hasUrl = e.dataTransfer.types.includes("text/uri-list") || e.dataTransfer.types.includes("text/plain");
+        const hasFiles = e.dataTransfer.types.includes("Files");
+
+        if (hasUrl || hasFiles) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+            if (!isOverGrid) {
+                isOverGrid = true;
+                container.style.opacity = "0.7";
+                container.style.borderColor = "var(--accent-1)";
+            }
+        }
+    });
+
+    container.addEventListener("dragleave", (e) => {
+        if (e.target === container) {
+            isOverGrid = false;
+            container.style.opacity = "1";
+            container.style.borderColor = "";
+        }
+    });
+
+    container.addEventListener("drop", async (e) => {
+        isOverGrid = false;
+        container.style.opacity = "1";
+        container.style.borderColor = "";
+
+        // Don't handle if dropping on a tile
+        if (e.target.closest(".app-tile")) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "copy";
+
+        console.log("Drop event fired. Types:", e.dataTransfer.types);
+        console.log("Files:", e.dataTransfer.files.length);
+
+        // Try to get URL from dataTransfer
+        let droppedUrl = null;
+        if (e.dataTransfer.types.includes("text/uri-list")) {
+            droppedUrl = e.dataTransfer.getData("text/uri-list").trim();
+            console.log("Got URL from text/uri-list:", droppedUrl);
+        } else if (e.dataTransfer.types.includes("text/plain")) {
+            const text = e.dataTransfer.getData("text/plain").trim();
+            console.log("Got text/plain:", text);
+            // Check if text looks like a URL
+            if (text.startsWith("http://") || text.startsWith("https://")) {
+                droppedUrl = text;
+            }
+        }
+
+
+        const droppedFile = e.dataTransfer.files?.[0];
+
+        // Handle dropped local file/folder first.
+        if (droppedFile) {
+            await handleLocalDropForApp(droppedFile, e);
+            return;
+        }
+
+        // Handle dropped URL.
+        if (droppedUrl) {
+            console.log("Handling URL:", droppedUrl);
+            await handleUrlDropForApp(droppedUrl);
+        } else {
+            console.log("No URL or files to handle");
+        }
+    });
+
+    // Prevent Chromium's default file-drop navigation and support dropping
+    // files on any empty area in the app window (not only the app grid).
+    document.addEventListener("dragover", (e) => {
+        if (e.dataTransfer?.types?.includes("Files")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+        }
+    });
+
+    document.addEventListener("drop", async (e) => {
+        const target = e.target;
+        const droppedFile = e.dataTransfer?.files?.[0];
+        if (!droppedFile) {
+            return;
+        }
+
+        // Let dedicated dropzones keep their own behavior.
+        if (target?.closest?.("#app-icon-dropzone") || target?.closest?.("#app-grid")) {
+            return;
+        }
+
+        e.preventDefault();
+        await handleLocalDropForApp(droppedFile, e);
+    });
+}
+
+function getDisplayNameFromLocalPath(localPath) {
+    const raw = String(localPath || "").trim().replace(/[\\/]+$/, "");
+    const slashIndex = Math.max(raw.lastIndexOf("\\"), raw.lastIndexOf("/"));
+    const basename = slashIndex >= 0 ? raw.slice(slashIndex + 1) : raw;
+    if (!basename) {
+        return "Local App";
+    }
+
+    const dotIndex = basename.lastIndexOf(".");
+    if (dotIndex > 0) {
+        return basename.slice(0, dotIndex);
+    }
+
+    return basename;
+}
+
+function getFallbackIconForLocalPath(localPath, kind) {
+    if (kind === "directory") {
+        return "📁";
+    }
+
+    const ext = String(localPath || "").toLowerCase();
+    if (ext.endsWith(".exe")) return "🖥️";
+    if (ext.endsWith(".bat") || ext.endsWith(".cmd")) return "⚙️";
+    if (ext.endsWith(".ps1")) return "💠";
+    if (ext.endsWith(".lnk")) return "🔗";
+    if (ext.endsWith(".ahk")) return "⌨️";
+    if (ext.endsWith(".url")) return "🌐";
+    return "📦";
+}
+
+function decodeFileUriToPath(uri) {
+    const text = String(uri || "").trim();
+    if (!text.toLowerCase().startsWith("file://")) {
+        return "";
+    }
+
+    try {
+        const url = new URL(text);
+        let pathname = decodeURIComponent(url.pathname || "");
+        if (/^\/[A-Za-z]:\//.test(pathname)) {
+            pathname = pathname.slice(1);
+        }
+        return pathname.replace(/\//g, "\\");
+    } catch {
+        return "";
+    }
+}
+
+async function getDroppedLocalPathFromEvent(event, file) {
+    if (isDesktop && window.launcherAPI?.getDroppedFilePath) {
+        try {
+            const electronPath = String(await window.launcherAPI.getDroppedFilePath(file) || "").trim();
+            if (electronPath) {
+                return electronPath;
+            }
+        } catch {
+            // Continue to URI/text fallbacks.
+        }
+    }
+
+    const directPath = String(file?.path || "").trim();
+    if (directPath) {
+        return directPath;
+    }
+
+    const uriList = String(event?.dataTransfer?.getData?.("text/uri-list") || "").trim();
+    if (uriList) {
+        const firstUri = uriList
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .find((line) => line && !line.startsWith("#"));
+        const pathFromUri = decodeFileUriToPath(firstUri);
+        if (pathFromUri) {
+            return pathFromUri;
+        }
+    }
+
+    const plainText = String(event?.dataTransfer?.getData?.("text/plain") || "").trim();
+    if (plainText) {
+        const pathFromTextUri = decodeFileUriToPath(plainText);
+        if (pathFromTextUri) {
+            return pathFromTextUri;
+        }
+    }
+
+    return "";
+}
+
+async function handleLocalDropForApp(file, event = null) {
+    const droppedPath = await getDroppedLocalPathFromEvent(event, file);
+    if (!droppedPath) {
+        showToast("Dropped file path could not be read.", "warning", 3200);
+        return;
+    }
+
+    if (!isDesktop) {
+        showToast("Local app file dropping is available in desktop mode only.", "info", 3600);
+        return;
+    }
+
+    const validation = await window.launcherAPI.validateLocalPath(droppedPath);
+    if (!validation?.ok) {
+        showToast(validation?.error || "Dropped path is invalid.", "warning", 3600);
+        return;
+    }
+
+    const opened = await openSettingsModal();
+    if (!opened) {
+        return;
+    }
+
+    setSettingsTab("profiles");
+    clearAppEditor();
+    byId("app-type").value = "local";
+    setTypeFields("local");
+    byId("app-path").value = validation.path;
+    byId("app-name").value = getDisplayNameFromLocalPath(validation.path);
+    byId("app-icon").value = getFallbackIconForLocalPath(validation.path, validation.kind);
+
+    // Auto-extract icon for dropped executables when possible.
+    const droppedExt = validation.kind === "file" ? validation.path.toLowerCase() : "";
+    if (droppedExt.endsWith(".exe") && iconImageInput && window.launcherAPI?.extractIcon) {
+        try {
+            const extractedIcon = await window.launcherAPI.extractIcon(validation.path);
+            if (extractedIcon) {
+                iconImageInput.setImageData(extractedIcon);
+            }
+        } catch {
+            // Keep flow smooth; icon extraction is best-effort only.
+        }
+    }
+
+    clearAppEditorError();
+    refreshAppHealthPanel();
+    focusAppEditorNameField();
+    showToast("Local app draft created from drop. Add details and click Save App.", "success", 3600);
+}
+
+async function handleUrlDropForApp(url) {
+    console.log("Creating web app from URL:", url);
+    const newApp = {
+        name: extractDomainFromUrl(url),
+        url: url,
+        type: "web",
+        icon: "🌐",
+        category: guessCategoryFromUrl(url),
+        description: "",
+        favorites: false,
+        aliases: "",
+        tag: ""
+    };
+
+    // Try to fetch favicon as image data
+    try {
+        const faviconUrl = fetchFaviconUrl(url);
+        console.log("Fetching favicon from:", faviconUrl);
+        const response = await fetch(faviconUrl);
+        const blob = await response.blob();
+
+        // Wait for FileReader to complete
+        await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                newApp.iconImage = e.target.result;
+                console.log("Favicon loaded as image data");
+                resolve();
+            };
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.warn("Failed to fetch favicon:", error);
+    }
+
+    // Add to active profile and open editor for review
+    const apps = getActiveApps();
+    apps.push(newApp);
+    console.log("App added:", newApp);
+    syncSettingsForm();
+    loadAppIntoEditor(apps.length - 1);
+    showModal(true);
+    setSettingsTab("profiles");
+    byId("app-name").focus();
+}
+
+
 function getTileElements() {
     return Array.from(document.querySelectorAll(".app-tile"));
 }
@@ -2345,7 +3256,10 @@ function makeTile(app, appIndex) {
     tile.setAttribute("role", "button");
     const ariaType = app.type === "local" ? "Local" : app.type === "steam" ? "Steam" : "Web";
     tile.setAttribute("aria-label", `${app.name || "App"} (${ariaType})${broken ? " — path broken" : ""}`);
-    tile.setAttribute("data-tip", "Click to launch | Right-click to edit | Drag to reorder | Tab + Enter for keyboard");
+    if (app.tag) {
+        tile.setAttribute("data-tag", app.tag);
+    }
+    tile.setAttribute("data-tip", "Click to launch | Hover to select | Hover 1.2s for stats | Right-click to edit | Drag to reorder");
 
     tile.addEventListener("mousemove", (event) => {
         const rect = tile.getBoundingClientRect();
@@ -2357,6 +3271,72 @@ function makeTile(app, appIndex) {
         tile.style.setProperty("--x", "50%");
         tile.style.setProperty("--y", "50%");
         markTileTipSeen();
+        clearStatsHoverTimer();
+    });
+
+    // Stats hover popup (1.2 seconds, 5 second timeout)
+    let statsHoverTimer = null;
+    let statsTimeoutTimer = null;
+    const STATS_HOVER_DELAY = 1200; // milliseconds
+    const STATS_DISPLAY_TIMEOUT = 5000; // milliseconds
+    let statsPopup = null;
+
+    function showStatsPopup() {
+        const telemetry = getAppTelemetry(app);
+        const launchCount = telemetry?.launchCount || 0;
+        const lastLaunched = telemetry?.lastLaunched ? new Date(telemetry.lastLaunched).toLocaleString() : "Never";
+        const lastError = telemetry?.lastError || "None";
+
+        // Create popup if it doesn't exist
+        if (!statsPopup) {
+            statsPopup = document.createElement("div");
+            statsPopup.className = "stats-popup";
+            tile.appendChild(statsPopup);
+        }
+
+        // Set content with only stats text
+        statsPopup.innerHTML = `
+            <div class="stats-label">Launches</div>
+            <div class="stats-value">${launchCount}</div>
+            <div class="stats-label">Last</div>
+            <div class="stats-value">${lastLaunched.split(" ")[0]}</div>
+            ${lastError !== "None" ? `<div class="stats-label error">Error</div><div class="stats-value error">${lastError}</div>` : ""}
+        `;
+        statsPopup.style.display = "block";
+
+        // Clear any existing timeout and set a new one
+        if (statsTimeoutTimer) {
+            clearTimeout(statsTimeoutTimer);
+        }
+        statsTimeoutTimer = setTimeout(() => {
+            hideStatsPopup();
+        }, STATS_DISPLAY_TIMEOUT);
+    }
+
+    function hideStatsPopup() {
+        if (statsPopup) {
+            statsPopup.style.display = "none";
+        }
+        if (statsTimeoutTimer) {
+            clearTimeout(statsTimeoutTimer);
+            statsTimeoutTimer = null;
+        }
+    }
+
+    function clearStatsHoverTimer() {
+        if (statsHoverTimer) {
+            clearTimeout(statsHoverTimer);
+            statsHoverTimer = null;
+        }
+    }
+
+    tile.addEventListener("mouseenter", () => {
+        statsHoverTimer = setTimeout(showStatsPopup, STATS_HOVER_DELAY);
+    });
+
+    tile.addEventListener("mouseleave", () => {
+        clearStatsHoverTimer();
+        hideStatsPopup();
     });
 
     const fixButton = tile.querySelector(".tile-health-fix-btn");
@@ -2372,8 +3352,54 @@ function makeTile(app, appIndex) {
         });
     }
 
-    tile.addEventListener("click", async () => {
-        await launchApp(app);
+    const favoriteBtn = tile.querySelector(".tile-favorite-btn");
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            await toggleAppFavorite(appIndex);
+        });
+
+        favoriteBtn.addEventListener("keydown", (event) => {
+            event.stopPropagation();
+        });
+    }
+
+    // Checkbox for batch selection
+    const checkbox = tile.querySelector(".tile-select-checkbox");
+    if (checkbox) {
+        checkbox.addEventListener("change", (event) => {
+            event.stopPropagation();
+            if (event.target.checked) {
+                state.selectedAppIndices.add(appIndex);
+                tile.classList.add("tile-selected");
+            } else {
+                state.selectedAppIndices.delete(appIndex);
+                tile.classList.remove("tile-selected");
+            }
+        });
+    }
+
+    tile.addEventListener("click", async (event) => {
+        // Don't launch if clicking checkbox
+        if (event.target.classList.contains("tile-select-checkbox")) {
+            return;
+        }
+
+        // If multiple apps selected, show batch edit instead of launching
+        if (state.selectedAppIndices.size > 0) {
+            event.preventDefault();
+            event.stopPropagation();
+            openBatchEditModal();
+            return;
+        }
+
+        // Shift+click to launch with arguments
+        if (event.shiftKey && app.type === "local") {
+            await openLaunchArgsDialog(app);
+        } else {
+            await launchApp(app);
+        }
     });
 
     tile.addEventListener("keydown", async (event) => {
@@ -2492,6 +3518,7 @@ function matchesSearch(app, query) {
         app.description,
         app.category,
         app.type,
+        app.aliases,
         app.url,
         app.path,
         app.id,
@@ -2633,7 +3660,8 @@ function renderApps() {
     if (!hasCategories) {
         const grid = document.createElement("div");
         grid.className = "grid";
-        visibleApps.forEach(({ app, idx }) => grid.appendChild(makeTile(app, idx)));
+        const sorted = [...visibleApps].sort((a, b) => (b.app.favorite === true ? 1 : 0) - (a.app.favorite === true ? 1 : 0));
+        sorted.forEach(({ app, idx }) => grid.appendChild(makeTile(app, idx)));
         container.appendChild(grid);
         return;
     }
@@ -2661,7 +3689,8 @@ function renderApps() {
 
         const grid = document.createElement("div");
         grid.className = "grid";
-        categoryMap.get(key).forEach(({ app, idx }) => grid.appendChild(makeTile(app, idx)));
+        const sorted = [...categoryMap.get(key)].sort((a, b) => (b.app.favorite === true ? 1 : 0) - (a.app.favorite === true ? 1 : 0));
+        sorted.forEach(({ app, idx }) => grid.appendChild(makeTile(app, idx)));
         section.appendChild(grid);
 
         container.appendChild(section);
@@ -2704,7 +3733,11 @@ function collectAppFromEditor() {
         icon: byId("app-icon").value.trim() || "📦",
         iconImage: iconImageInput ? iconImageInput.getImageData() : null,
         description: byId("app-description").value.trim(),
-        category: byId("app-category").value.trim()
+        category: byId("app-category").value.trim(),
+        aliases: byId("app-aliases").value.trim(),
+        tag: byId("app-tag").value.trim() || "",
+        hotkey: byId("app-hotkey").value.trim(),
+        notes: byId("app-notes").value.trim()
     };
 
     if (type === "web") {
@@ -2978,6 +4011,33 @@ async function saveApp() {
 
     clearAppEditorError();
 
+    // Handle hotkey changes
+    if (isDesktop) {
+        const oldApp = state.editingAppIndex !== null ? getActiveApps()[state.editingAppIndex] : null;
+        const oldHotkey = oldApp?.hotkey;
+        const newHotkey = app.hotkey;
+
+        console.log("Hotkey save:", { oldHotkey, newHotkey, appName: app.name });
+
+        // Unregister old hotkey if it changed
+        if (oldHotkey && oldHotkey !== newHotkey) {
+            console.log("Unregistering old hotkey:", oldHotkey);
+            const unregResult = await window.launcherAPI.unregisterHotkey(oldHotkey);
+            console.log("Unregister result:", unregResult);
+        }
+
+        // Register new hotkey if present
+        if (newHotkey) {
+            console.log("Registering new hotkey:", newHotkey);
+            const result = await window.launcherAPI.registerHotkey(app);
+            console.log("Register result:", result);
+            if (!result.success) {
+                showAppEditorError(`Hotkey registration failed: ${result.error}`, "app-hotkey");
+                return false;
+            }
+        }
+    }
+
     if (state.editingAppIndex === null) {
         getActiveApps().push(app);
     } else {
@@ -3006,6 +4066,11 @@ async function deleteApp() {
     const confirmed = window.confirm(`Delete ${app.name}?`);
     if (!confirmed) {
         return;
+    }
+
+    // Unregister hotkey if present
+    if (isDesktop && app.hotkey) {
+        await window.launcherAPI.unregisterHotkey(app.hotkey);
     }
 
     getActiveApps().splice(state.editingAppIndex, 1);
@@ -3178,6 +4243,7 @@ function applyRawSettings(raw) {
             },
             apps: Array.isArray(settings.apps) ? settings.apps : state.config.apps,
             profiles: Array.isArray(settings.profiles) ? settings.profiles : state.config.profiles,
+            themePresets: Array.isArray(settings.themePresets) && settings.themePresets.length > 0 ? settings.themePresets : state.config.themePresets,
             activeProfileId: settings.activeProfileId || state.config.activeProfileId
         };
 
@@ -3213,6 +4279,7 @@ async function loadConfigFile() {
             },
             apps: Array.isArray(configFromFile.apps) ? configFromFile.apps : state.config.apps,
             profiles: Array.isArray(configFromFile.profiles) ? configFromFile.profiles : state.config.profiles,
+            themePresets: Array.isArray(configFromFile.themePresets) && configFromFile.themePresets.length > 0 ? configFromFile.themePresets : state.config.themePresets,
             activeProfileId: configFromFile.activeProfileId || state.config.activeProfileId
         };
 
@@ -3225,7 +4292,146 @@ async function loadConfigFile() {
     }
 }
 
+// --- Hotkey Management ---
+function formatHotkey(event) {
+    const parts = [];
+    if (event.ctrlKey) parts.push("Ctrl");
+    if (event.altKey) parts.push("Alt");
+    if (event.shiftKey) parts.push("Shift");
+    if (event.metaKey) parts.push("Meta");
+
+    // Get the key name
+    let key = event.key;
+    if (key === " ") key = "Space";
+    if (key.length === 1) key = key.toUpperCase();
+
+    parts.push(key);
+    return parts.join("+");
+}
+
+function checkHotkeyConflict(hotkey, excludeAppIndex = null) {
+    const apps = getActiveApps();
+    for (let i = 0; i < apps.length; i++) {
+        if (i === excludeAppIndex) continue;
+        if (apps[i].hotkey === hotkey) {
+            return { conflict: true, appName: apps[i].name, appIndex: i };
+        }
+    }
+    return { conflict: false };
+}
+
+function renderHotkeysList() {
+    const container = byId("hotkeys-list");
+    const apps = getActiveApps();
+    const appsWithHotkeys = apps.filter(app => app.hotkey);
+
+    if (appsWithHotkeys.length === 0) {
+        container.innerHTML = '<p style="color: #888;">No hotkeys assigned yet. Add a hotkey in the app editor.</p>';
+        return;
+    }
+
+    container.innerHTML = appsWithHotkeys.map((app, idx) => {
+        const appIndex = apps.indexOf(app);
+        const conflict = checkHotkeyConflict(app.hotkey, appIndex);
+        const conflictClass = conflict.conflict ? ' style="border-left: 2px solid #ff6b6b; padding-left: 0.5em;"' : '';
+        const conflictMsg = conflict.conflict ? ` <span style="color: #ff6b6b; font-size: 0.85em;">(⚠️ Conflict with ${conflict.appName})</span>` : '';
+
+        return `
+            <div${conflictClass}>
+                <strong>${app.icon || "📦"} ${app.name}</strong>: <code style="background: #2a2a2a; padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace;">${app.hotkey}</code>${conflictMsg}
+            </div>
+        `;
+    }).join('');
+}
+
+function setupHotkeyRecorder() {
+    const recordBtn = byId("app-hotkey-record-btn");
+    const clearBtn = byId("app-hotkey-clear-btn");
+    const hotkeyInput = byId("app-hotkey");
+    const statusSpan = byId("app-hotkey-status");
+
+    const handleHotkeyKeydown = (event) => {
+        if (!currentHotkeyRecording) return;
+
+        event.preventDefault();
+
+        // Warn about Alt - it's typically reserved by OS/browser
+        if (event.altKey) {
+            statusSpan.textContent = "⚠️ Alt hotkeys may not work (OS/browser reserved). Try Ctrl+Shift instead.";
+            statusSpan.style.color = "#ff9800";
+            return;
+        }
+
+        // Ignore if only modifier keys pressed
+        const isOnlyModifier = ["Control", "Shift", "Meta"].includes(event.key);
+        if (isOnlyModifier) {
+            statusSpan.textContent = "(press a key with Ctrl/Shift/Meta)";
+            statusSpan.style.color = "#aaa";
+            return;
+        }
+
+        const hotkey = formatHotkey(event);
+
+        // Check for conflicts
+        const editingIndex = state.editingAppIndex;
+        const conflict = checkHotkeyConflict(hotkey, editingIndex);
+
+        if (conflict.conflict) {
+            statusSpan.textContent = `⚠️ Already used by "${conflict.appName}"`;
+            statusSpan.style.color = "#ff6b6b";
+        } else {
+            hotkeyInput.value = hotkey;
+            currentHotkeyRecording = null;
+            recordBtn.textContent = "Record";
+            recordBtn.style.backgroundColor = "";
+            statusSpan.textContent = "(assigned)";
+            statusSpan.style.color = "#51cf66";
+            document.removeEventListener("keydown", handleHotkeyKeydown);
+        }
+    };
+
+    recordBtn.addEventListener("click", () => {
+        if (currentHotkeyRecording) {
+            // Stop recording
+            currentHotkeyRecording = null;
+            recordBtn.textContent = "Record";
+            recordBtn.style.backgroundColor = "";
+            statusSpan.textContent = "";
+            document.removeEventListener("keydown", handleHotkeyKeydown);
+        } else {
+            // Start recording
+            currentHotkeyRecording = true;
+            recordBtn.textContent = "Recording...";
+            recordBtn.style.backgroundColor = "rgba(255, 200, 0, 0.3)";
+            statusSpan.textContent = "(listening for keys...)";
+            document.addEventListener("keydown", handleHotkeyKeydown);
+        }
+    });
+
+    clearBtn.addEventListener("click", () => {
+        hotkeyInput.value = "";
+        statusSpan.textContent = "";
+        currentHotkeyRecording = null;
+        recordBtn.textContent = "Record";
+        recordBtn.style.backgroundColor = "";
+        document.removeEventListener("keydown", handleHotkeyKeydown);
+    });
+}
+
 function wireEvents() {
+    setupHotkeyRecorder();
+
+    // Listen for hotkey launches from main process
+    if (isDesktop && window.launcherAPI.onLaunchAppByHotkey) {
+        window.launcherAPI.onLaunchAppByHotkey((_event, appData) => {
+            console.log("Launching app via hotkey:", appData.name);
+            window.launcherAPI.openTarget(appData).catch(error => {
+                console.error("Error launching app from hotkey:", error);
+                showToast(`Error launching ${appData.name}: ${error.message}`, "error");
+            });
+        });
+    }
+
     byId("open-help").addEventListener("click", () => showHelpModal(true));
 
     document.addEventListener("keydown", handleGlobalKeydown);
@@ -3271,6 +4477,7 @@ function wireEvents() {
         renderApps();
     });
     wireAppGridDropHandlers();
+    wireAppCreationDropHandlers();
 
     byId("app-search").addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
@@ -3473,8 +4680,94 @@ function wireEvents() {
     });
     byId("save-app").addEventListener("click", saveApp);
     byId("delete-app").addEventListener("click", deleteApp);
+    byId("save-as-template-btn").addEventListener("click", async () => {
+        if (state.editingAppIndex === null) {
+            showToast("Please select an app to save as template", "warning");
+            return;
+        }
+
+        const templateName = await showPrompt("Template name:", getActiveApps()[state.editingAppIndex].name + " Template");
+        if (templateName) {
+            if (saveAppAsTemplate(state.editingAppIndex, templateName)) {
+                showToast(`Template "${templateName}" saved`, "success");
+                renderTemplatesList();
+            }
+        }
+    });
     byId("remove-selected-app").addEventListener("click", removeSelectedApp);
     byId("clear-app-health-error").addEventListener("click", clearSelectedAppHealthError);
+    byId("app-notes-btn").addEventListener("click", openAppNotesEditor);
+    byId("app-notes-preview").addEventListener("click", openAppNotesEditor);
+    byId("save-notes").addEventListener("click", saveAppNotes);
+    byId("cancel-notes").addEventListener("click", () => showNotesModal(false));
+    byId("confirm-launch-args").addEventListener("click", async () => {
+        if (state.pendingLaunchApp) {
+            const app = state.pendingLaunchApp;
+            const customArgs = byId("launch-args-input").value;
+            showLaunchArgsModal(false);
+            state.pendingLaunchApp = null;
+            await launchAppWithCustomArgs(app, customArgs);
+        }
+    });
+    byId("cancel-launch-args").addEventListener("click", () => {
+        showLaunchArgsModal(false);
+        state.pendingLaunchApp = null;
+    });
+    byId("launch-args-input").addEventListener("keydown", async (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            if (state.pendingLaunchApp) {
+                const app = state.pendingLaunchApp;
+                const customArgs = byId("launch-args-input").value;
+                showLaunchArgsModal(false);
+                state.pendingLaunchApp = null;
+                await launchAppWithCustomArgs(app, customArgs);
+            }
+        } else if (event.key === "Escape") {
+            event.preventDefault();
+            showLaunchArgsModal(false);
+            state.pendingLaunchApp = null;
+        }
+    });
+
+    // Batch Edit modal listeners
+    byId("apply-batch-edit").addEventListener("click", () => {
+        applyBatchEdit();
+    });
+
+    byId("cancel-batch-edit").addEventListener("click", () => {
+        showBatchEditModal(false);
+        clearAppSelection();
+    });
+
+    // Batch edit field toggles
+    document.querySelectorAll(".batch-edit-toggle").forEach((checkbox) => {
+        checkbox.addEventListener("change", (event) => {
+            const field = event.target.dataset.field;
+            const input = byId(`batch-${field}`);
+            if (input) {
+                input.disabled = !event.target.checked;
+                if (event.target.checked) {
+                    setTimeout(() => input.focus(), 0);
+                }
+            }
+        });
+    });
+
+    // Batch edit keyboard shortcuts
+    document.querySelectorAll(".batch-edit-field input").forEach((input) => {
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                applyBatchEdit();
+            } else if (event.key === "Escape") {
+                event.preventDefault();
+                showBatchEditModal(false);
+                clearAppSelection();
+            }
+        });
+    });
+
     byId("profile-select").addEventListener("change", (event) => switchProfile(event.target.value));
     byId("new-profile").addEventListener("click", createProfile);
     byId("rename-profile").addEventListener("click", renameProfile);
@@ -3676,6 +4969,21 @@ async function bootstrap() {
         if (!hotkeyResult.ok) {
             state.config.globalHotkey = "";
             byId("cfg-global-hotkey").value = "";
+        }
+
+        // Register app-specific hotkeys
+        registerAppHotkeys();
+    }
+}
+
+async function registerAppHotkeys() {
+    const apps = getActiveApps();
+    for (const app of apps) {
+        if (app.hotkey) {
+            const result = await window.launcherAPI.registerHotkey(app);
+            if (!result.success) {
+                console.warn(`Failed to register hotkey ${app.hotkey} for ${app.name}: ${result.error}`);
+            }
         }
     }
 }

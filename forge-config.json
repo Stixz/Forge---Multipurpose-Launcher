@@ -9,6 +9,30 @@
     "accent": "#f5a524",
     "text": "#e8f3ff"
   },
+  "themePresets": [
+    {
+      "id": "obsidian-steelblue",
+      "name": "Obsidian Steel Blue",
+      "theme": {
+        "bg1": "#181c20",
+        "bg2": "#232a32",
+        "accent": "#4682b4",
+        "text": "#f8f8f2",
+        "hover": "#6fa3d9"
+      }
+    },
+    {
+      "id": "minimalist",
+      "name": "Minimalist",
+      "theme": {
+        "bg1": "#1a1a1a",
+        "bg2": "#262626",
+        "accent": "#7a9b8f",
+        "text": "#c8c8c8",
+        "hover": "#8fab9f"
+      }
+    }
+  ],
   "apps": [
     {
       "name": "Example Web App",
