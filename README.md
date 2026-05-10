@@ -2,6 +2,10 @@
 
 A reusable, config-driven app launcher skeleton that runs as a stripped-down desktop window via Electron.
 
+### I am very proud of this basic but yet very useful applications. It looks, feels and works very well.
+
+<img width="1369" height="976" alt="Screenshot 2026-05-10 141251" src="https://github.com/user-attachments/assets/a930204f-e138-4ca7-ba63-c6f8e63a02e7" />
+
 ---
 
 ## File Overview
